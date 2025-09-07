@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Registry UI Kubernetes Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-ui-service
+  annotations:
+    metallb.universe.tf/address-pool: "homelab-services"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+{% if registry_ui_nodeport %}
+    nodePort: {{ registry_ui_nodeport }}
+{% endif %}
+  selector:
+    app: registry-ui

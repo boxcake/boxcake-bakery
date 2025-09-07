@@ -1,0 +1,78 @@
+---
+# Main Ansible playbook for Home Lab Pi setup
+- name: "Home Lab Pi Complete Setup"
+  hosts: homelab
+  become: yes
+  gather_facts: yes
+  
+  vars_files:
+    - vars/main.yml
+    - vars/network.yml
+  
+  pre_tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags: always
+
+  roles:
+    - role: system-prep
+      tags: [system, prep]
+      
+    - role: homelab-user
+      tags: [user, security]
+      
+    - role: docker
+      tags: [docker, container]
+      
+    - role: k3s
+      tags: [k3s, kubernetes]
+      
+    - role: storage
+      tags: [storage, longhorn]
+      
+    - role: load-balancer
+      tags: [metallb, networking]
+      
+    - role: container-registry
+      tags: [registry, services]
+      
+    - role: registry-ui
+      tags: [registry-ui, web]
+      
+    - role: portainer
+      tags: [portainer, management]
+      
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: |
+          🎉 Home Lab Pi setup completed successfully!
+          
+          ✅ COMPLETE DEPLOYMENT - All services running:
+          - K3s Kubernetes cluster
+          - Longhorn distributed storage  
+          - MetalLB load balancer with IP pools
+          - Docker Registry (systemd service)
+          - Registry UI (web interface)
+          - Portainer (container management)
+          
+          🌐 Access your Home Lab:
+          - Registry API: http://localhost:{{ registry_port }}
+          - Registry UI LoadBalancer: Check kubectl get svc registry-ui-service
+          - Portainer LoadBalancer: Check kubectl get svc portainer-service
+          - Direct access: http://{{ ansible_default_ipv4.address }}:{{ portainer_nodeport }}
+          
+          🚀 Next steps:
+          1. Access Portainer to create admin user
+          2. Explore your Kubernetes cluster
+          3. Deploy additional applications as needed
+          4. Manage everything: sudo -u {{ homelab_user }} -i
+          
+          📊 LoadBalancer Status:
+          Run: kubectl get svc -A | grep LoadBalancer
+          
+          🎊 Migration Complete: Pure Ansible deployment!
+      tags: always

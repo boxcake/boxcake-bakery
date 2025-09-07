@@ -1,0 +1,18 @@
+# configs/network-defaults.yaml
+homelab:
+  network:
+    # Base network configuration
+    pod_cidr: "10.42.0.0/16"
+    service_cidr: "10.43.0.0/16"
+
+    # Service IP pools
+    pools:
+      homelab:
+        cidr: "10.43.0.0/20"
+        description: "Core infrastructure (dashboard, portainer, registry, etc.)"
+        auto_assign: true          # Automatically assign to homelab components
+
+      user:
+        cidr: "10.43.16.0/20"
+        description: "User applications (gitea, databases, custom apps)"
+        auto_assign: false         # User must explicitly specify

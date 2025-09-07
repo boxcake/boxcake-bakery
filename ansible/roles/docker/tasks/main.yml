@@ -1,0 +1,46 @@
+---
+# Docker installation and configuration
+- name: Check if Docker is already installed
+  command: docker --version
+  register: docker_installed
+  failed_when: false
+  changed_when: false
+
+- name: Download Docker installation script
+  get_url:
+    url: https://get.docker.com
+    dest: /tmp/get-docker.sh
+    mode: '0755'
+  when: docker_installed.rc != 0
+
+- name: Install Docker
+  shell: sh /tmp/get-docker.sh
+  when: docker_installed.rc != 0
+  
+- name: Remove Docker installation script
+  file:
+    path: /tmp/get-docker.sh
+    state: absent
+
+- name: Add homelab user to docker group
+  user:
+    name: "{{ homelab_user }}"
+    groups: docker
+    append: yes
+
+- name: Start and enable Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Verify Docker is working
+  command: docker info
+  register: docker_info
+  changed_when: false
+
+- name: Pre-pull registry image
+  docker_image:
+    name: "{{ registry_image }}"
+    source: pull
+  tags: [registry-prep]

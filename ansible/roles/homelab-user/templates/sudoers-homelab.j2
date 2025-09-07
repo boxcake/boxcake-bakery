@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Sudo permissions for homelab user
+
+# Allow homelab user to manage specific services
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl start docker-registry
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl stop docker-registry  
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart docker-registry
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl status docker-registry
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/journalctl -u docker-registry*
+
+# Allow homelab user to manage K3s images
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /usr/local/bin/k3s ctr images*
+
+# Allow admin user to switch to homelab user without password
+{{ admin_user }} ALL=({{ homelab_user }}) NOPASSWD: ALL
+
+# Allow homelab user to restart networking if needed
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart networking
+{{ homelab_user }} ALL=(ALL) NOPASSWD: /sbin/iptables *

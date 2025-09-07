@@ -1,0 +1,67 @@
+---
+# Helm and Longhorn storage setup
+- name: Check if Helm is installed
+  command: helm version --short
+  register: helm_installed
+  failed_when: false
+  changed_when: false
+
+- name: Download Helm installation script
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get_helm.sh
+    mode: '0755'
+  when: helm_installed.rc != 0
+
+- name: Install Helm
+  shell: bash /tmp/get_helm.sh
+  when: helm_installed.rc != 0
+
+- name: Remove Helm installation script
+  file:
+    path: /tmp/get_helm.sh
+    state: absent
+
+- name: Add Longhorn Helm repository
+  shell: helm repo add longhorn https://charts.longhorn.io
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: helm_repo_add
+  failed_when: false
+  changed_when: "'already exists' not in helm_repo_add.stderr"
+
+- name: Update Helm repositories
+  shell: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Check if Longhorn is already installed
+  shell: helm list -n longhorn-system | grep longhorn
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: longhorn_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install Longhorn distributed storage
+  shell: |
+    helm install longhorn longhorn/longhorn \
+      --namespace longhorn-system \
+      --create-namespace \
+      --set persistence.defaultClass=true \
+      --set persistence.defaultClassReplicaCount=1 \
+      --set csi.kubeletRootDir=/var/lib/kubelet \
+      --wait --timeout=10m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: longhorn_installed.rc != 0
+
+- name: Wait for Longhorn to be ready
+  shell: kubectl get pods -n longhorn-system -l app=longhorn-manager --no-headers | grep Running | wc -l
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: longhorn_pods
+  until: longhorn_pods.stdout | int > 0
+  retries: 30
+  delay: 10
+  changed_when: false

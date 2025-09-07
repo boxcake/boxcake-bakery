@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# MetalLB IP Address Pool for user services
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: user-services
+  namespace: metallb-system
+spec:
+  addresses:
+    - {{ metallb_user_pool_configured }}

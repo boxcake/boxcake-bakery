@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# MetalLB IP Address Pool for homelab services
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: homelab-services
+  namespace: metallb-system
+spec:
+  addresses:
+    - {{ metallb_homelab_pool_configured }}

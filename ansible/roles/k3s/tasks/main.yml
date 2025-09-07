@@ -1,0 +1,58 @@
+---
+# K3s installation and configuration
+- name: Check if K3s is already installed
+  command: k3s --version
+  register: k3s_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install K3s with custom network configuration
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="\
+      --cluster-cidr={{ k3s_pod_cidr_configured }} \
+      --service-cidr={{ k3s_service_cidr_configured }}" sh -
+  when: k3s_installed.rc != 0
+
+- name: Wait for K3s to be ready
+  wait_for:
+    port: 6443
+    host: localhost
+    delay: 10
+    timeout: 120
+
+- name: Make kubeconfig readable
+  file:
+    path: /etc/rancher/k3s/k3s.yaml
+    mode: '0644'
+
+- name: Configure registry for K3s
+  template:
+    src: registries.yaml.j2
+    dest: /etc/rancher/k3s/registries.yaml
+    mode: '0644'
+  notify: restart k3s
+
+- name: Copy kubeconfig to homelab user
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ homelab_home }}/.kube/config"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    mode: '0600'
+    remote_src: yes
+
+- name: Install kubectl for standalone use
+  get_url:
+    url: "https://dl.k8s.io/release/v{{ kubectl_version }}/bin/linux/arm64/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Verify K3s cluster is ready
+  shell: kubectl get nodes --no-headers | wc -l
+  register: cluster_nodes
+  until: cluster_nodes.stdout | int > 0
+  retries: 12
+  delay: 10
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  changed_when: false

@@ -1,0 +1,19 @@
+---
+# Network configuration variables
+# These are loaded from configs/network-defaults.yaml
+network_config_file: "{{ playbook_dir }}/../configs/network-defaults.yaml"
+
+# Default network settings (overridden by config file)
+k3s_pod_cidr: "10.42.0.0/16"
+k3s_service_cidr: "10.43.0.0/16"
+metallb_homelab_pool: "10.43.0.0/20"
+metallb_user_pool: "10.43.16.0/20"
+
+# Load network config from YAML file
+network_config: "{{ lookup('file', network_config_file) | from_yaml }}"
+
+# Extract values from loaded config
+k3s_pod_cidr_configured: "{{ network_config.homelab.network.pod_cidr }}"
+k3s_service_cidr_configured: "{{ network_config.homelab.network.service_cidr }}"
+metallb_homelab_pool_configured: "{{ network_config.homelab.network.pools.homelab.cidr }}"
+metallb_user_pool_configured: "{{ network_config.homelab.network.pools.user.cidr }}"

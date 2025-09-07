@@ -1,0 +1,89 @@
+---
+# Docker Container Registry systemd service setup
+- name: Create registry data directory
+  file:
+    path: "{{ registry_data_dir }}"
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Pre-pull registry Docker image
+  docker_image:
+    name: "{{ registry_image }}"
+    source: pull
+    state: present
+
+- name: Create registry configuration directory
+  file:
+    path: /etc/docker-registry
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Create registry configuration file
+  template:
+    src: registry-config.yml.j2
+    dest: /etc/docker-registry/config.yml
+    mode: '0644'
+    owner: root
+    group: root
+  notify: restart docker-registry
+
+- name: Create systemd service file for docker registry
+  template:
+    src: docker-registry.service.j2
+    dest: /etc/systemd/system/docker-registry.service
+    mode: '0644'
+    owner: root
+    group: root
+  notify:
+    - reload systemd
+    - restart docker-registry
+
+- name: Enable and start docker-registry service
+  systemd:
+    name: docker-registry
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Wait for registry to be accessible
+  uri:
+    url: "http://localhost:{{ registry_port }}/v2/"
+    method: GET
+    status_code: 200
+  register: registry_health
+  until: registry_health.status == 200
+  retries: 12
+  delay: 5
+
+- name: Test registry functionality
+  uri:
+    url: "http://localhost:{{ registry_port }}/v2/_catalog"
+    method: GET
+    status_code: 200
+  register: registry_catalog
+
+- name: Display registry status
+  debug:
+    msg: |
+      🐳 Container Registry service configured successfully!
+      
+      Registry Details:
+      - URL: http://localhost:{{ registry_port }}
+      - Data Directory: {{ registry_data_dir }}
+      - Image: {{ registry_image }}
+      - Service: docker-registry.service
+      
+      Registry Catalog: {{ registry_catalog.json }}
+      
+      Management Commands:
+      - Status: sudo systemctl status docker-registry
+      - Logs: sudo journalctl -u docker-registry -f
+      - Restart: sudo systemctl restart docker-registry
+      
+      Test Registry:
+      - Catalog: curl http://localhost:{{ registry_port }}/v2/_catalog
+      - Health: curl http://localhost:{{ registry_port }}/v2/

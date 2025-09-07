@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# K3s registry configuration
+mirrors:
+  "localhost:{{ registry_port }}":
+    endpoint:
+      - "http://localhost:{{ registry_port }}"
+configs:
+  "localhost:{{ registry_port }}":
+    tls:
+      insecure_skip_verify: {{ registry_insecure | lower }}

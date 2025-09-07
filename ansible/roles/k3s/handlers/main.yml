@@ -1,0 +1,7 @@
+---
+# K3s handlers
+- name: restart k3s
+  systemd:
+    name: k3s
+    state: restarted
+  listen: restart k3s

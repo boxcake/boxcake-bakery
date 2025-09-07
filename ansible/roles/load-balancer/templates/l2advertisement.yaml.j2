@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# MetalLB L2 Advertisement for Layer 2 mode
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: l2-advert
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - homelab-services
+    - user-services

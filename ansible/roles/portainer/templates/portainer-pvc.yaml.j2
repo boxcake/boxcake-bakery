@@ -1,0 +1,15 @@
+# {{ ansible_managed }}
+# Portainer Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: portainer-pvc
+  labels:
+    app: portainer
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ portainer_storage_size }}

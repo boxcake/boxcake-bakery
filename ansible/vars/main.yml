@@ -1,0 +1,36 @@
+---
+# Main variables for Home Lab Pi
+homelab_user: "homelab"
+homelab_group: "homelab" 
+homelab_home: "/home/{{ homelab_user }}"
+homelab_repo_path: "{{ homelab_home }}/homelab-pi"
+
+# Tool versions
+terraform_version: "1.6.6"
+helm_version: "3.14.0"
+kubectl_version: "1.29.0"
+
+# Registry configuration
+registry_port: 5000
+registry_data_dir: "/opt/registry/data"
+registry_image: "registry:2.8"
+
+# Service ports
+portainer_nodeport: 32090
+portainer_nodeport_https: 32443
+registry_ui_nodeport: 32080
+
+# Portainer configuration
+portainer_storage_size: "200Mi"
+portainer_image: "portainer/portainer-ce:latest"
+portainer_admin_password: "homelab123"  # Change this for production
+
+# Security settings
+allow_registry_deletion: true
+registry_insecure: true
+
+# Timezone
+system_timezone: "UTC"
+
+# Ansible settings
+ansible_python_interpreter: "/usr/bin/python3"

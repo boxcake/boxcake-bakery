@@ -1,0 +1,74 @@
+# {{ ansible_managed }}
+# Homelab user .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
+# User specific environment
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
+export KUBECONFIG="$HOME/.kube/config"
+export EDITOR=nano
+
+# Aliases
+alias k='kubectl'
+alias tf='terraform'
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+alias ..='cd ..'
+alias ...='cd ../..'
+
+# Kubectl completion
+if command -v kubectl >/dev/null 2>&1; then
+    source <(kubectl completion bash)
+    complete -F __start_kubectl k
+fi
+
+# Terraform completion
+if command -v terraform >/dev/null 2>&1; then
+    complete -C terraform terraform
+    complete -C terraform tf
+fi
+
+# Homelab functions
+homelab-status() {
+    echo "🏠 Home Lab Status"
+    echo "=================="
+    echo "K3s Cluster:"
+    kubectl get nodes 2>/dev/null || echo "  ❌ K3s not accessible"
+    echo ""
+    echo "Services:"
+    kubectl get svc -A 2>/dev/null | grep -E "(portainer|registry)" || echo "  ❌ Services not found"
+    echo ""
+    echo "Pods:"
+    kubectl get pods -A 2>/dev/null || echo "  ❌ Pods not accessible"
+}
+
+homelab-logs() {
+    if [ -z "$1" ]; then
+        echo "Usage: homelab-logs <service-name>"
+        echo "Available services: portainer, registry-ui, longhorn, metallb"
+        return 1
+    fi
+    kubectl logs -n default -l app="$1" --tail=50 -f
+}
+
+# Welcome message
+if [ -t 1 ]; then
+    echo "🏠 Welcome to Home Lab Pi!"
+    echo "=========================="
+    echo "Current directory: $(pwd)"
+    echo "Kubernetes config: $KUBECONFIG"
+    echo ""
+    echo "Quick commands:"
+    echo "  homelab-status  - Show cluster status"
+    echo "  homelab-logs    - View service logs"
+    echo "  k get pods      - List all pods"
+    echo "  tf plan         - Preview infrastructure changes"
+    echo ""
+fi
+
+# Change to homelab directory
+cd {{ homelab_repo_path }} 2>/dev/null || true

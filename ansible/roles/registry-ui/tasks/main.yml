@@ -1,0 +1,155 @@
+---
+# Registry UI Kubernetes deployment using kubernetes.core modules
+- name: Create Registry UI deployment
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: registry-ui
+        namespace: default
+        labels:
+          app: registry-ui
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: registry-ui
+        template:
+          metadata:
+            labels:
+              app: registry-ui
+          spec:
+            containers:
+            - name: registry-ui
+              image: joxit/docker-registry-ui:main
+              ports:
+              - containerPort: 80
+                name: http
+              env:
+              - name: REGISTRY_TITLE
+                value: "Home Lab Container Registry"
+              - name: REGISTRY_URL
+                value: "http://{{ ansible_default_ipv4.address }}:{{ registry_port }}"
+              - name: DELETE_IMAGES
+                value: "{{ allow_registry_deletion | lower }}"
+              - name: SHOW_CONTENT_DIGEST
+                value: "true"
+              - name: NGINX_PROXY_PASS_URL
+                value: "http://{{ ansible_default_ipv4.address }}:{{ registry_port }}"
+              - name: SHOW_CATALOG_NB_TAGS
+                value: "true"
+              - name: CATALOG_MIN_BRANCHES
+                value: "1"
+              - name: CATALOG_MAX_BRANCHES
+                value: "1"
+              - name: TAGLIST_PAGE_SIZE
+                value: "100"
+              - name: REGISTRY_SECURED
+                value: "false"
+              - name: CATALOG_ELEMENTS_LIMIT
+                value: "1000"
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+              livenessProbe:
+                httpGet:
+                  path: /
+                  port: 80
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                timeoutSeconds: 5
+              readinessProbe:
+                httpGet:
+                  path: /
+                  port: 80
+                initialDelaySeconds: 5
+                periodSeconds: 5
+                timeoutSeconds: 3
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create Registry UI service
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: registry-ui-service
+        namespace: default
+        annotations:
+          metallb.universe.tf/address-pool: "homelab-services"
+      spec:
+        type: LoadBalancer
+        ports:
+        - name: http
+          port: 80
+          targetPort: 80
+        selector:
+          app: registry-ui
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Wait for Registry UI deployment to be ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: registry-ui
+    namespace: default
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+
+- name: Get Registry UI service information
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: registry-ui-service
+    namespace: default
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  register: registry_ui_service_info
+
+- name: Display Registry UI status
+  debug:
+    msg: |
+      🖥️  Registry UI deployed successfully!
+      
+      🎯 DEPLOYMENT STATUS:
+      ✅ Registry UI pod running
+      ✅ LoadBalancer service created
+      ✅ Connected to registry: {{ ansible_default_ipv4.address }}:{{ registry_port }}
+      
+      🌐 Access URLs:
+      {% if registry_ui_service_info.resources and registry_ui_service_info.resources | length > 0 and registry_ui_service_info.resources[0].status.loadBalancer.ingress is defined %}
+      - LoadBalancer: http://{{ registry_ui_service_info.resources[0].status.loadBalancer.ingress[0].ip }}
+      {% endif %}
+      - Direct access: http://{{ ansible_default_ipv4.address }}:{{ registry_ui_nodeport }}
+      
+      🐳 Registry Configuration:
+      - Registry API: http://{{ ansible_default_ipv4.address }}:{{ registry_port }}
+      - Image deletion: {{ allow_registry_deletion | lower }}
+      - Image: joxit/docker-registry-ui:main
+      
+      ✨ Features Enabled:
+      - Browse container images and tags
+      - View image manifests and content digest
+      - {{ 'Delete images via UI' if allow_registry_deletion else 'Read-only access' }}
+      - Catalog pagination (100 tags per page)
+      - Image layer information
+      
+      🔍 Verification Commands:
+      - kubectl get pods -l app=registry-ui
+      - kubectl get svc registry-ui-service
+      - kubectl logs -l app=registry-ui
+      - curl http://{{ ansible_default_ipv4.address }}:{{ registry_port }}/v2/_catalog
+      
+      💡 Usage Tips:
+      - Push images to localhost:{{ registry_port }}/image:tag
+      - Images will appear in Registry UI within seconds
+      - Use Registry UI to explore image layers and metadata

@@ -1,0 +1,16 @@
+---
+# Dynamic inventory template for Home Lab Pi
+# This file is created automatically by setup-via-ansible.sh
+
+homelab:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_become: yes
+      # These variables are populated dynamically:
+      # admin_user: "detected_user"
+      # homelab_user: "homelab" 
+      # homelab_home: "/home/homelab"
+  vars:
+    # Global variables for all homelab hosts
+    ansible_python_interpreter: "/usr/bin/python3"

@@ -1,0 +1,143 @@
+---
+# MetalLB Load Balancer installation and configuration using kubernetes.core modules
+- name: Add MetalLB Helm repository
+  shell: helm repo add metallb https://metallb.github.io/metallb
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: helm_repo_add
+  failed_when: false
+  changed_when: "'already exists' not in helm_repo_add.stderr"
+
+- name: Update Helm repositories
+  shell: helm repo update
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+- name: Check if MetalLB is already installed
+  shell: helm list -n metallb-system | grep metallb
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: metallb_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install MetalLB load balancer
+  shell: |
+    helm install metallb metallb/metallb \
+      --namespace metallb-system \
+      --create-namespace \
+      --wait --timeout=300s
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: metallb_installed.rc != 0
+
+- name: Wait for MetalLB to be ready
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: metallb-system
+    label_selectors:
+      - app.kubernetes.io/name=metallb
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+
+- name: Create MetalLB homelab IP address pool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: metallb.io/v1beta1
+      kind: IPAddressPool
+      metadata:
+        name: homelab-services
+        namespace: metallb-system
+      spec:
+        addresses:
+          - "{{ metallb_homelab_pool_configured }}"
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create MetalLB user IP address pool
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: metallb.io/v1beta1
+      kind: IPAddressPool
+      metadata:
+        name: user-services
+        namespace: metallb-system
+      spec:
+        addresses:
+          - "{{ metallb_user_pool_configured }}"
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Create MetalLB L2 Advertisement
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: metallb.io/v1beta1
+      kind: L2Advertisement
+      metadata:
+        name: l2-advert
+        namespace: metallb-system
+      spec:
+        ipAddressPools:
+          - homelab-services
+          - user-services
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+- name: Get MetalLB IP address pools information
+  kubernetes.core.k8s_info:
+    api_version: metallb.io/v1beta1
+    kind: IPAddressPool
+    namespace: metallb-system
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  register: metallb_pools_info
+
+- name: Get MetalLB L2 advertisement information
+  kubernetes.core.k8s_info:
+    api_version: metallb.io/v1beta1
+    kind: L2Advertisement
+    namespace: metallb-system
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  register: metallb_l2_info
+
+- name: Display MetalLB status
+  debug:
+    msg: |
+      🎯 MetalLB Load Balancer configured successfully!
+      
+      📊 DEPLOYMENT STATUS:
+      ✅ MetalLB installed via Helm
+      ✅ IP address pools configured
+      ✅ L2 advertisement configured
+      ✅ LoadBalancer services ready for IP assignment
+      
+      📡 IP Address Pools:
+      {% for pool in metallb_pools_info.resources %}
+      - {{ pool.metadata.name }}: {{ pool.spec.addresses | join(', ') }}
+      {% endfor %}
+      
+      🌐 Network Configuration:
+      - Homelab Pool: {{ metallb_homelab_pool_configured }}
+      - User Pool: {{ metallb_user_pool_configured }}
+      - L2 Mode: Layer 2 advertisement enabled
+      
+      🚀 Ready for LoadBalancer Services:
+      Services with type=LoadBalancer will automatically get IPs from these pools
+      
+      💡 Usage Examples:
+      - Portainer uses homelab-services pool (annotation)
+      - Registry UI uses homelab-services pool (annotation)
+      - Future services can specify pool via annotation:
+        metallb.universe.tf/address-pool: "user-services"
+      
+      🔍 Verification Commands:
+      - kubectl get ipaddresspools -n metallb-system
+      - kubectl get l2advertisements -n metallb-system
+      - kubectl get pods -n metallb-system
+      - kubectl get svc -A | grep LoadBalancer
+      
+      🎊 Next Steps:
+      Any service with type=LoadBalancer will now get an external IP!

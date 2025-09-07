@@ -1,0 +1,75 @@
+---
+# System preparation tasks
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    update_cache: yes
+    autoremove: yes
+    autoclean: yes
+  tags: [packages]
+
+- name: Install essential system packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - software-properties-common
+      - open-iscsi
+      - python3-pip
+      - python3-dev
+      - python3-setuptools
+      - python3-kubernetes  # Kubernetes Python client
+      - python3-yaml        # PyYAML
+      - python3-jsonpatch   # JSON patch library
+      - jq
+      - tree
+      - htop
+    state: present
+  tags: [packages]
+
+- name: Install yq (YAML processor)
+  shell: |
+    YQ_VERSION="v4.40.5"
+    YQ_BINARY="yq_linux_arm64"
+    wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY}" -O /usr/local/bin/yq
+    chmod +x /usr/local/bin/yq
+  args:
+    creates: /usr/local/bin/yq
+  tags: [tools]
+
+- name: Enable and start iSCSI service
+  systemd:
+    name: iscsid
+    enabled: yes
+    state: started
+  tags: [services]
+
+- name: Set timezone
+  timezone:
+    name: "{{ system_timezone }}"
+  tags: [system]
+
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: yes
+  tags: [networking]
+
+- name: Create required directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/homelab
+    - /var/log/homelab
+    - "{{ registry_data_dir }}"
+  tags: [directories]

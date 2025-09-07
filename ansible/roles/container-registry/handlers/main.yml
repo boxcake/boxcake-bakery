@@ -1,0 +1,10 @@
+---
+# Handlers for container-registry role
+- name: reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: restart docker-registry
+  systemd:
+    name: docker-registry
+    state: restarted

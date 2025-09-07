@@ -1,0 +1,63 @@
+---
+# Homelab user creation and configuration
+- name: Create homelab group
+  group:
+    name: "{{ homelab_group }}"
+    state: present
+
+- name: Create homelab user
+  user:
+    name: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    groups: docker
+    home: "{{ homelab_home }}"
+    shell: /bin/bash
+    create_home: yes
+    state: present
+
+- name: Create homelab user directories
+  file:
+    path: "{{ homelab_home }}/{{ item }}"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    mode: '0755'
+  loop:
+    - .kube
+    - logs
+    - data
+    - bin
+
+- name: Copy repository to homelab user directory
+  copy:
+    src: "{{ playbook_dir }}/../"
+    dest: "{{ homelab_repo_path }}/"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    mode: preserve
+    remote_src: yes
+  tags: [repository]
+
+- name: Configure homelab user bashrc
+  template:
+    src: bashrc.j2
+    dest: "{{ homelab_home }}/.bashrc"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    mode: '0644'
+    backup: yes
+
+- name: Configure sudo permissions for homelab user
+  template:
+    src: sudoers-homelab.j2
+    dest: /etc/sudoers.d/homelab
+    mode: '0440'
+    validate: '/usr/sbin/visudo -cf %s'
+
+- name: Set ownership of homelab home directory
+  file:
+    path: "{{ homelab_home }}"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_group }}"
+    recurse: yes
+  tags: [permissions]

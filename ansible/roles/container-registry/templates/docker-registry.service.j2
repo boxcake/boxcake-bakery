@@ -1,0 +1,24 @@
+# {{ ansible_managed }}
+# Docker Registry systemd service
+[Unit]
+Description=Docker Registry
+Requires=docker.service
+After=docker.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStartPre=-/usr/bin/docker stop registry
+ExecStartPre=-/usr/bin/docker rm registry
+ExecStart=/usr/bin/docker run --rm --name registry \
+  -p {{ registry_port }}:5000 \
+  -v {{ registry_data_dir }}:/var/lib/registry \
+  -v /etc/docker-registry/config.yml:/etc/docker/registry/config.yml:ro \
+  {{ registry_image }}
+ExecStop=/usr/bin/docker stop registry
+
+[Install]
+WantedBy=multi-user.target
