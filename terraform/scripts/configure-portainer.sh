@@ -61,7 +61,7 @@ else
   # Initialize admin user
   INIT_RESPONSE=$(curl -s -X POST \
     -H "Content-Type: application/json" \
-    -d '{"Username":"admin","Password":"${portainer_admin_password}"}' \
+    -d "{\"Username\":\"admin\",\"Password\":\"$PORTAINER_ADMIN_PASSWORD\"}" \
     $PORTAINER_URL/api/users/admin/init)
 
   echo "✅ Admin user created"
@@ -71,7 +71,7 @@ fi
 echo "🔑 Authenticating..."
 TOKEN=$(curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"Username":"admin","Password":"${portainer_admin_password}"}' \
+  -d "{\"Username\":\"admin\",\"Password\":\"$PORTAINER_ADMIN_PASSWORD\"}" \
   $PORTAINER_URL/api/auth | jq -r '.jwt')
 
 if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
@@ -127,5 +127,5 @@ echo "✅ Portainer settings configured"
 
 echo "🎉 Portainer configuration complete!"
 echo "   👤 Admin user: admin"
-echo "   🔐 Password: ${portainer_admin_password}"
+echo "   🔐 Password: $PORTAINER_ADMIN_PASSWORD"
 echo "   🐳 Registry: registry-service:5000"

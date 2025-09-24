@@ -215,10 +215,14 @@ resource "kubernetes_job" "portainer_configure" {
           args = [
             "-c",
             templatefile("${path.module}/scripts/configure-portainer.sh", {
-              portainer_admin_password = var.portainer_admin_password
               namespace = var.namespace
             })
           ]
+
+          env {
+            name  = "PORTAINER_ADMIN_PASSWORD"
+            value = var.portainer_admin_password
+          }
 
           resources {
             requests = {
