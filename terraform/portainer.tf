@@ -216,6 +216,7 @@ resource "kubernetes_job" "portainer_configure" {
             "-c",
             templatefile("${path.module}/scripts/configure-portainer.sh", {
               portainer_admin_password = var.portainer_admin_password
+              namespace = var.namespace
             })
           ]
 

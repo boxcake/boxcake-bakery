@@ -6,13 +6,16 @@ apk add --no-cache jq
 
 echo "🚀 Configuring Portainer..."
 
+# Set the service URL using FQDN
+PORTAINER_URL="http://portainer-service.${namespace}.svc.cluster.local:80"
+
 # Wait for Portainer to be ready
 echo "⏳ Waiting for Portainer to be accessible..."
 RETRY_COUNT=0
 MAX_RETRIES=60
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if curl -s http://portainer-service:80/api/status >/dev/null 2>&1; then
+  if curl -s $PORTAINER_URL/api/status >/dev/null 2>&1; then
     echo "✅ Portainer is ready"
     break
   fi
@@ -27,7 +30,7 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
 fi
 
 # Check if admin user already exists
-STATUS=$(curl -s -o /dev/null -w "%%{http_code}" http://portainer-service:80/api/users/admin/check || echo "000")
+STATUS=$(curl -s -o /dev/null -w "%%{http_code}" $PORTAINER_URL/api/users/admin/check || echo "000")
 
 if [ "$STATUS" = "204" ]; then
   echo "ℹ️  Admin user already configured, checking registry..."
@@ -38,7 +41,7 @@ else
   INIT_RESPONSE=$(curl -s -X POST \
     -H "Content-Type: application/json" \
     -d '{"Username":"admin","Password":"${portainer_admin_password}"}' \
-    http://portainer-service:80/api/users/admin/init)
+    $PORTAINER_URL/api/users/admin/init)
 
   echo "✅ Admin user created"
 fi
@@ -48,7 +51,7 @@ echo "🔑 Authenticating..."
 TOKEN=$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{"Username":"admin","Password":"${portainer_admin_password}"}' \
-  http://portainer-service:80/api/auth | jq -r '.jwt')
+  $PORTAINER_URL/api/auth | jq -r '.jwt')
 
 if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
   echo "❌ Failed to get authentication token"
@@ -59,7 +62,7 @@ echo "✅ Authentication successful"
 
 # Check if registry already exists
 REGISTRIES=$(curl -s -H "Authorization: Bearer $TOKEN" \
-  http://portainer-service:80/api/registries)
+  $PORTAINER_URL/api/registries)
 
 LOCAL_REGISTRY_EXISTS=$(echo "$REGISTRIES" | jq -r '.[] | select(.URL == "registry-service:5000") | .Name')
 
@@ -78,7 +81,7 @@ else
       "Username": "",
       "Password": ""
     }' \
-    http://portainer-service:80/api/registries
+    $PORTAINER_URL/api/registries
 
   echo "✅ Local registry registered"
 fi
@@ -97,7 +100,7 @@ curl -s -X PUT \
     "EnableTelemetry": false,
     "UserSessionTimeout": "8h"
   }' \
-  http://portainer-service:80/api/settings
+  $PORTAINER_URL/api/settings
 
 echo "✅ Portainer settings configured"
 
