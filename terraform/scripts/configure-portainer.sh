@@ -1,13 +1,34 @@
 #!/bin/sh
 set -e
 
-# Install jq for JSON processing
-apk add --no-cache jq
+# Install jq and other tools for JSON processing and network debugging
+apk add --no-cache jq curl bind-tools
 
 echo "🚀 Configuring Portainer..."
 
-# Set the service URL using FQDN
-PORTAINER_URL="http://portainer-service.${namespace}.svc.cluster.local:80"
+# Try to resolve the service name first
+echo "🔍 Checking service name resolution..."
+if nslookup portainer-service >/dev/null 2>&1; then
+  echo "✅ DNS resolution working"
+  PORTAINER_URL="http://portainer-service:80"
+else
+  echo "⚠️  DNS resolution failed, trying to get service IP..."
+
+  # Try to get the service IP using nslookup on different forms
+  if nslookup portainer-service.${namespace}.svc.cluster.local >/dev/null 2>&1; then
+    echo "✅ FQDN resolution working"
+    PORTAINER_URL="http://portainer-service.${namespace}.svc.cluster.local:80"
+  else
+    echo "❌ Service name resolution failed completely"
+    echo "🔧 Checking network configuration..."
+    cat /etc/resolv.conf
+    echo "🔧 Available services in DNS:"
+    nslookup kubernetes.default.svc.cluster.local || echo "Even kubernetes service not resolvable"
+    exit 1
+  fi
+fi
+
+echo "📡 Using Portainer URL: $PORTAINER_URL"
 
 # Wait for Portainer to be ready
 echo "⏳ Waiting for Portainer to be accessible..."
