@@ -43,7 +43,10 @@
       
     - role: portainer
       tags: [portainer, management]
-      
+
+    - role: kubelish
+      tags: [kubelish, mdns]
+
 
   post_tasks:
     - name: Display completion message
@@ -53,11 +56,12 @@
           
           ✅ COMPLETE DEPLOYMENT - All services running:
           - K3s Kubernetes cluster
-          - Longhorn distributed storage  
+          - Longhorn distributed storage
           - MetalLB load balancer with IP pools
           - Docker Registry (systemd service)
           - Registry UI (web interface)
           - Portainer (container management)
+          - Kubelish mDNS announcer (all nodes)
           
           🌐 Access your Home Lab:
           - Registry API: http://localhost:{{ registry_port }}

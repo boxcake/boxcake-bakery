@@ -1,0 +1,23 @@
+---
+# roles/kubelish/meta/main.yml
+
+galaxy_info:
+  author: "Your Name"
+  description: "Deploy kubelish for mDNS announcement of Kubernetes LoadBalancer services"
+  company: "Your Company"
+  license: "MIT"
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+    - name: Debian
+      versions:
+        - bullseye
+        - bookworm
+
+dependencies: []
+
+collections:
+  - kubernetes.core

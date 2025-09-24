@@ -1,0 +1,7 @@
+---
+# roles/kubelish/vars/main.yml
+
+# Internal variables - do not override
+kubelish_binary_path: /usr/local/bin/kubelish
+kubelish_service_name: kubelish
+kubelish_namespace: kube-system

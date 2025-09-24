@@ -1,0 +1,182 @@
+---
+# roles/kubelish/tasks/main.yml
+
+- name: Enable Avahi reflector mode
+  lineinfile:
+    path: /etc/avahi/avahi-daemon.conf
+    regexp: '^enable-reflector='
+    line: 'enable-reflector=yes'
+    insertafter: '^\[reflector\]'
+    create: no
+    backup: yes
+  notify: restart avahi-daemon
+  become: yes
+
+- name: Ensure [reflector] section exists in avahi-daemon.conf
+  blockinfile:
+    path: /etc/avahi/avahi-daemon.conf
+    block: |
+      [reflector]
+      enable-reflector=yes
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - reflector"
+    insertbefore: EOF
+    backup: yes
+  notify: restart avahi-daemon
+  become: yes
+
+- name: Create kubelish binary directory
+  file:
+    path: /usr/local/bin
+    state: directory
+    mode: '0755'
+  become: yes
+
+- name: Check if Go is installed
+  command: which go
+  register: go_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install kubelish binary via Go
+  shell: |
+    export GOPATH=/tmp/go-kubelish
+    export GOBIN=/usr/local/bin
+    go install github.com/holoplot/kubelish/cmd/kubelish@latest
+    rm -rf /tmp/go-kubelish
+  become: yes
+  when: go_installed.rc == 0
+  notify: restart kubelish
+
+- name: Download kubelish binary (fallback)
+  get_url:
+    url: "{{ kubelish_download_url }}"
+    dest: /usr/local/bin/kubelish
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+  when: go_installed.rc != 0
+  notify: restart kubelish
+
+- name: Create temporary directory for Kubernetes manifests
+  tempfile:
+    state: directory
+    suffix: kubelish
+  register: temp_dir
+  delegate_to: localhost
+  run_once: true
+
+- name: Generate Kubernetes RBAC manifests
+  template:
+    src: kubelish-rbac.yaml.j2
+    dest: "{{ temp_dir.path }}/kubelish-rbac.yaml"
+  delegate_to: localhost
+  run_once: true
+
+- name: Apply Kubernetes RBAC configuration
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ item }}"
+    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+  loop:
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: kubelish
+        namespace: kube-system
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: kubelish
+      rules:
+      - apiGroups: [""]
+        resources: ["services"]
+        verbs: ["list", "watch"]
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: kubelish
+      subjects:
+      - kind: ServiceAccount
+        name: kubelish
+        namespace: kube-system
+      roleRef:
+        kind: ClusterRole
+        name: kubelish
+        apiGroup: rbac.authorization.k8s.io
+  delegate_to: localhost
+  run_once: true
+
+- name: Get service account token
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: kube-system
+    label_selectors:
+      - kubernetes.io/service-account.name=kubelish
+    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+  register: kubelish_secrets
+  delegate_to: localhost
+  run_once: true
+
+- name: Create service account token secret if not exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: kubelish-token
+        namespace: kube-system
+        annotations:
+          kubernetes.io/service-account.name: kubelish
+      type: kubernetes.io/service-account-token
+    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+  when: kubelish_secrets.resources | length == 0
+  delegate_to: localhost
+  run_once: true
+
+- name: Wait for token to be populated
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: kubelish-token
+    namespace: kube-system
+    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+  register: kubelish_token_secret
+  until: kubelish_token_secret.resources[0].data.token is defined
+  retries: 30
+  delay: 2
+  delegate_to: localhost
+  run_once: true
+
+- name: Extract service account token
+  set_fact:
+    kubelish_sa_token: "{{ kubelish_token_secret.resources[0].data.token | b64decode }}"
+  delegate_to: localhost
+  run_once: true
+
+- name: Create kubelish systemd service
+  template:
+    src: kubelish.service.j2
+    dest: /etc/systemd/system/kubelish.service
+    mode: '0644'
+  become: yes
+  notify:
+    - reload systemd
+    - restart kubelish
+
+- name: Enable and start kubelish service
+  systemd:
+    name: kubelish
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  become: yes
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ temp_dir.path }}"
+    state: absent
+  delegate_to: localhost
+  run_once: true

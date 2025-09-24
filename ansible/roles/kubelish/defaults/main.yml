@@ -1,0 +1,18 @@
+---
+# roles/kubelish/defaults/main.yml
+
+# Kubelish binary download URL - detect architecture
+kubelish_version: "latest"
+kubelish_architecture: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+kubelish_download_url: "https://github.com/holoplot/kubelish/releases/latest/download/kubelish-linux-{{ kubelish_architecture }}"
+
+# Kubernetes configuration
+kubernetes_api_url: "https://{{ ansible_default_ipv4.address }}:6443"
+kubeconfig_path: "~/.kube/config"
+
+# Service configuration
+kubelish_restart_sec: 5
+kubelish_limit_nofile: 65536
+
+# Avahi configuration
+avahi_enable_reflector: yes
