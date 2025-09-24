@@ -1,5 +1,48 @@
 # Docker Container Registry
 
+# ConfigMap for Registry configuration
+resource "kubernetes_config_map" "registry_config" {
+  metadata {
+    name      = "registry-config"
+    namespace = var.namespace
+
+    labels = {
+      app = "registry"
+    }
+  }
+
+  data = {
+    "config.yml" = <<-EOT
+      version: 0.1
+      log:
+        fields:
+          service: registry
+      storage:
+        cache:
+          blobdescriptor: inmemory
+        filesystem:
+          rootdirectory: /var/lib/registry
+        delete:
+          enabled: ${var.allow_registry_deletion}
+      http:
+        addr: :5000
+        headers:
+          X-Content-Type-Options: [nosniff]
+          Access-Control-Allow-Origin: ['*']
+          Access-Control-Allow-Methods: [HEAD,GET,OPTIONS,DELETE]
+          Access-Control-Allow-Headers: [Authorization,Accept,Cache-Control]
+          Access-Control-Max-Age: [1728000]
+          Access-Control-Allow-Credentials: [true]
+          Access-Control-Expose-Headers: [Docker-Content-Digest]
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
+    EOT
+  }
+}
+
 # Persistent Volume Claim for Registry data
 resource "kubernetes_persistent_volume_claim" "registry_pvc" {
   metadata {
@@ -65,49 +108,9 @@ resource "kubernetes_deployment" "registry" {
             mount_path = "/var/lib/registry"
           }
 
-          env {
-            name  = "REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY"
-            value = "/var/lib/registry"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_ADDR"
-            value = "0.0.0.0:5000"
-          }
-
-          env {
-            name  = "REGISTRY_STORAGE_DELETE_ENABLED"
-            value = tostring(var.allow_registry_deletion)
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin"
-            value = "[*]"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods"
-            value = "[HEAD,GET,OPTIONS,DELETE]"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers"
-            value = "[Authorization,Accept,Cache-Control]"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Max-Age"
-            value = "[1728000]"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials"
-            value = "[true]"
-          }
-
-          env {
-            name  = "REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers"
-            value = "[Docker-Content-Digest]"
+          volume_mount {
+            name       = "registry-config"
+            mount_path = "/etc/docker/registry"
           }
 
           resources {
@@ -146,6 +149,13 @@ resource "kubernetes_deployment" "registry" {
           name = "registry-data"
           persistent_volume_claim {
             claim_name = kubernetes_persistent_volume_claim.registry_pvc.metadata[0].name
+          }
+        }
+
+        volume {
+          name = "registry-config"
+          config_map {
+            name = kubernetes_config_map.registry_config.metadata[0].name
           }
         }
       }
