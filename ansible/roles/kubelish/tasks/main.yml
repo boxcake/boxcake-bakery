@@ -31,12 +31,6 @@
     mode: '0755'
   become: yes
 
-- name: Check if Go is installed
-  command: which go
-  register: go_installed
-  failed_when: false
-  changed_when: false
-
 - name: Install kubelish binary via Go
   shell: |
     export GOPATH=/tmp/go-kubelish
@@ -44,18 +38,6 @@
     go install github.com/holoplot/kubelish/cmd/kubelish@latest
     rm -rf /tmp/go-kubelish
   become: yes
-  when: go_installed.rc == 0
-  notify: restart kubelish
-
-- name: Download kubelish binary (fallback)
-  get_url:
-    url: "{{ kubelish_download_url }}"
-    dest: /usr/local/bin/kubelish
-    mode: '0755'
-    owner: root
-    group: root
-  become: yes
-  when: go_installed.rc != 0
   notify: restart kubelish
 
 - name: Create temporary directory for Kubernetes manifests
