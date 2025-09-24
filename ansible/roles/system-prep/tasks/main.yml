@@ -51,6 +51,16 @@
     creates: /usr/local/go/bin/go
   tags: [tools]
 
+- name: Install OpenTofu
+  shell: |
+    curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o /tmp/install-opentofu.sh
+    chmod +x /tmp/install-opentofu.sh
+    /tmp/install-opentofu.sh --install-method deb
+    rm -f /tmp/install-opentofu.sh
+  args:
+    creates: /usr/bin/tofu
+  tags: [tools]
+
 - name: Install yq (YAML processor)
   shell: |
     YQ_VERSION="v4.40.5"
