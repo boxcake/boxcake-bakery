@@ -5,6 +5,9 @@ homelab_group: "homelab"
 homelab_home: "/home/{{ homelab_user }}"
 homelab_repo_path: "{{ homelab_home }}/homelab-pi"
 
+# Kubernetes
+kubeconfig_path: "/etc/rancher/k3s/k3s.yaml"
+
 # Tool versions
 terraform_version: "1.6.6"
 helm_version: "3.14.0"

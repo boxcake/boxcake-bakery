@@ -59,7 +59,7 @@
   kubernetes.core.k8s:
     state: present
     definition: "{{ item }}"
-    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+    kubeconfig: "{{ kubeconfig_path }}"
   loop:
     - apiVersion: v1
       kind: ServiceAccount
@@ -96,7 +96,7 @@
     namespace: kube-system
     label_selectors:
       - kubernetes.io/service-account.name=kubelish
-    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+    kubeconfig: "{{ kubeconfig_path }}"
   register: kubelish_secrets
   delegate_to: localhost
   run_once: true
@@ -113,7 +113,7 @@
         annotations:
           kubernetes.io/service-account.name: kubelish
       type: kubernetes.io/service-account-token
-    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+    kubeconfig: "{{ kubeconfig_path }}"
   when: kubelish_secrets.resources | length == 0
   delegate_to: localhost
   run_once: true
@@ -124,7 +124,7 @@
     kind: Secret
     name: kubelish-token
     namespace: kube-system
-    kubeconfig: "{{ kubeconfig_path | default(omit) }}"
+    kubeconfig: "{{ kubeconfig_path }}"
   register: kubelish_token_secret
   until: kubelish_token_secret.resources[0].data.token is defined
   retries: 30

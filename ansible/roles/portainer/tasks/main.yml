@@ -18,7 +18,7 @@
         resources:
           requests:
             storage: "{{ portainer_storage_size }}"
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Create Portainer service account
   kubernetes.core.k8s:
@@ -29,7 +29,7 @@
       metadata:
         name: portainer-sa
         namespace: default
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Create Portainer cluster role binding
   kubernetes.core.k8s:
@@ -47,7 +47,7 @@
       - kind: ServiceAccount
         name: portainer-sa
         namespace: default
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Create Portainer deployment
   kubernetes.core.k8s:
@@ -112,7 +112,7 @@
             - name: portainer-data
               persistentVolumeClaim:
                 claimName: portainer-pvc
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Create Portainer service
   kubernetes.core.k8s:
@@ -136,7 +136,7 @@
           targetPort: 9443
         selector:
           app: portainer
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Wait for Portainer deployment to be ready
   kubernetes.core.k8s_info:
@@ -144,7 +144,7 @@
     kind: Deployment
     name: portainer
     namespace: default
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
     wait_condition:
       type: Available
       status: "True"
@@ -288,7 +288,7 @@
                 limits:
                   memory: "128Mi"
                   cpu: "100m"
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
 
 - name: Wait for Portainer configuration job to complete
   kubernetes.core.k8s_info:
@@ -296,7 +296,7 @@
     kind: Job
     name: portainer-configure
     namespace: default
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
     wait_condition:
       type: Complete
       status: "True"
@@ -310,7 +310,7 @@
     kind: Service
     name: portainer-service
     namespace: default
-    kubeconfig: /etc/rancher/k3s/k3s.yaml
+    kubeconfig: "{{ kubeconfig_path }}"
   register: portainer_service_info
 
 - name: Display Portainer status
