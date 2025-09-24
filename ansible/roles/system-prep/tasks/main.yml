@@ -32,6 +32,8 @@
       - htop
       - docker
       - docker-compose
+      - avahi-daemon
+      - libnss-mdns
     state: present
   tags: [packages]
 

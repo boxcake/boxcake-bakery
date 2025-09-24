@@ -19,6 +19,9 @@ Turn your Raspberry Pi into a complete Kubernetes home lab with container regist
 - Internet connection
 - SSH access
 
+### System preparation
+- Append cgroup_memory=1 cgroup_enable=memory to the existing line of parameters in the /boot/firmware/cmdline.txt
+
 ### Installation
 
 1. **Clone this repository:**
