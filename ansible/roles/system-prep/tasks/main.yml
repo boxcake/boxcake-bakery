@@ -30,6 +30,8 @@
       - jq
       - tree
       - htop
+      - docker
+      - docker-compose
     state: present
   tags: [packages]
 
