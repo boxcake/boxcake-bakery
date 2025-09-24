@@ -80,8 +80,8 @@ output "registry_info" {
 output "deployment_status" {
   description = "Status of all deployments"
   value = {
-    registry_ready    = kubernetes_deployment.registry.status[0].ready_replicas > 0
-    portainer_ready   = kubernetes_deployment.portainer.status[0].ready_replicas > 0
-    registry_ui_ready = kubernetes_deployment.registry_ui.status[0].ready_replicas > 0
+    registry_deployed    = kubernetes_deployment.registry.metadata[0].name
+    portainer_deployed   = kubernetes_deployment.portainer.metadata[0].name
+    registry_ui_deployed = kubernetes_deployment.registry_ui.metadata[0].name
   }
 }

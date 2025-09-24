@@ -27,7 +27,7 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
 fi
 
 # Check if admin user already exists
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://portainer-service:80/api/users/admin/check || echo "000")
+STATUS=$(curl -s -o /dev/null -w "%%{http_code}" http://portainer-service:80/api/users/admin/check || echo "000")
 
 if [ "$STATUS" = "204" ]; then
   echo "ℹ️  Admin user already configured, checking registry..."

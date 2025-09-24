@@ -235,6 +235,4 @@ resource "kubernetes_job" "portainer_configure" {
   }
 
   depends_on = [kubernetes_service.portainer_service, kubernetes_service.registry_service]
-
-  wait_for_rollout = false
 }
