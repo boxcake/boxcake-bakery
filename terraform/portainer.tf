@@ -216,8 +216,6 @@ resource "kubernetes_job" "portainer_configure" {
             "-c",
             templatefile("${path.module}/scripts/configure-portainer.sh", {
               portainer_admin_password = var.portainer_admin_password
-              registry_host            = var.host_ip
-              registry_port           = var.registry_port
             })
           ]
 
@@ -236,7 +234,7 @@ resource "kubernetes_job" "portainer_configure" {
     }
   }
 
-  depends_on = [kubernetes_service.portainer_service]
+  depends_on = [kubernetes_service.portainer_service, kubernetes_service.registry_service]
 
   wait_for_rollout = false
 }

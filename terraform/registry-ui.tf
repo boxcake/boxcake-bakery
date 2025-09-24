@@ -44,7 +44,7 @@ resource "kubernetes_deployment" "registry_ui" {
 
           env {
             name  = "REGISTRY_URL"
-            value = "http://${var.host_ip}:${var.registry_port}"
+            value = "http://registry-service:5000"
           }
 
           env {
@@ -59,7 +59,7 @@ resource "kubernetes_deployment" "registry_ui" {
 
           env {
             name  = "NGINX_PROXY_PASS_URL"
-            value = "http://${var.host_ip}:${var.registry_port}"
+            value = "http://registry-service:5000"
           }
 
           env {
@@ -126,6 +126,8 @@ resource "kubernetes_deployment" "registry_ui" {
       }
     }
   }
+
+  depends_on = [kubernetes_service.registry_service]
 }
 
 # Registry UI LoadBalancer Service

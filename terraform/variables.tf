@@ -39,10 +39,22 @@ variable "portainer_nodeport_https" {
 }
 
 # Registry Configuration
+variable "registry_image" {
+  description = "Docker registry container image"
+  type        = string
+  default     = "registry:2.8"
+}
+
 variable "registry_port" {
-  description = "Port for the local Docker registry"
+  description = "External port for the Docker registry LoadBalancer"
   type        = number
   default     = 5000
+}
+
+variable "registry_storage_size" {
+  description = "Storage size for registry persistent volume"
+  type        = string
+  default     = "10Gi"
 }
 
 variable "registry_ui_nodeport" {
@@ -62,10 +74,4 @@ variable "metallb_pool_name" {
   description = "MetalLB address pool name"
   type        = string
   default     = "homelab-services"
-}
-
-variable "host_ip" {
-  description = "Host IP address for registry access"
-  type        = string
-  # Will be determined at runtime or provided via tfvars
 }

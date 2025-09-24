@@ -34,9 +34,6 @@
       
     - role: load-balancer
       tags: [metallb, networking]
-      
-    - role: container-registry
-      tags: [registry, services]
 
     - role: kubelish
       tags: [kubelish, mdns]
@@ -52,17 +49,14 @@
           - K3s Kubernetes cluster
           - Longhorn distributed storage
           - MetalLB load balancer with IP pools
-          - Docker Registry (systemd service)
           - Kubelish mDNS announcer (all nodes)
           - OpenTofu (Infrastructure as Code)
 
-          🌐 Access your Home Lab:
-          - Registry API: http://localhost:{{ registry_port }}
-
           🚧 Next Steps - Deploy with OpenTofu:
+          - Docker Registry (container with persistent storage)
           - Portainer (container management)
           - Registry UI (web interface)
-          - Additional services with proper state management
+          - All services with proper state management
           
           🚀 Ready for OpenTofu deployment:
           1. Navigate to terraform/ directory

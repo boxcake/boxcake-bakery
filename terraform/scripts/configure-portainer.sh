@@ -61,7 +61,7 @@ echo "✅ Authentication successful"
 REGISTRIES=$(curl -s -H "Authorization: Bearer $TOKEN" \
   http://portainer-service:80/api/registries)
 
-LOCAL_REGISTRY_EXISTS=$(echo "$REGISTRIES" | jq -r '.[] | select(.URL == "${registry_host}:${registry_port}") | .Name')
+LOCAL_REGISTRY_EXISTS=$(echo "$REGISTRIES" | jq -r '.[] | select(.URL == "registry-service:5000") | .Name')
 
 if [ -n "$LOCAL_REGISTRY_EXISTS" ]; then
   echo "ℹ️  Local registry already configured: $LOCAL_REGISTRY_EXISTS"
@@ -73,7 +73,7 @@ else
     -d '{
       "Name": "Local Registry",
       "Type": 1,
-      "URL": "${registry_host}:${registry_port}",
+      "URL": "registry-service:5000",
       "Authentication": false,
       "Username": "",
       "Password": ""
@@ -104,4 +104,4 @@ echo "✅ Portainer settings configured"
 echo "🎉 Portainer configuration complete!"
 echo "   👤 Admin user: admin"
 echo "   🔐 Password: ${portainer_admin_password}"
-echo "   🐳 Registry: ${registry_host}:${registry_port}"
+echo "   🐳 Registry: registry-service:5000"

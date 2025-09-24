@@ -75,6 +75,14 @@ show_cleanup_plan() {
     kubectl --kubeconfig="$KUBECONFIG_PATH" get clusterrolebinding portainer-crb 2>/dev/null && echo "  - ClusterRoleBinding: portainer-crb" || true
     kubectl --kubeconfig="$KUBECONFIG_PATH" get job portainer-configure -n "$NAMESPACE" 2>/dev/null && echo "  - Job: portainer-configure" || true
 
+    # Registry resources
+    echo ""
+    echo "🐳 REGISTRY RESOURCES:"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment registry -n "$NAMESPACE" 2>/dev/null && echo "  - Deployment: registry" || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-service -n "$NAMESPACE" 2>/dev/null && echo "  - Service: registry-service" || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-loadbalancer -n "$NAMESPACE" 2>/dev/null && echo "  - LoadBalancer: registry-loadbalancer" || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get pvc registry-pvc -n "$NAMESPACE" 2>/dev/null && echo "  - PersistentVolumeClaim: registry-pvc" || true
+
     # Registry UI resources
     echo ""
     echo "🖥️  REGISTRY UI RESOURCES:"
@@ -147,6 +155,42 @@ cleanup_portainer() {
     fi
 }
 
+# Clean up Registry resources
+cleanup_registry() {
+    log_info "Cleaning up Registry resources..."
+
+    # Remove deployment
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment registry -n "$NAMESPACE" &> /dev/null; then
+        log_info "Deleting Registry deployment..."
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete deployment registry -n "$NAMESPACE" --ignore-not-found=true
+        log_success "Registry deployment deleted"
+    fi
+
+    # Remove services
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-service -n "$NAMESPACE" &> /dev/null; then
+        log_info "Deleting Registry service..."
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete service registry-service -n "$NAMESPACE" --ignore-not-found=true
+        log_success "Registry service deleted"
+    fi
+
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-loadbalancer -n "$NAMESPACE" &> /dev/null; then
+        log_info "Deleting Registry LoadBalancer service..."
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete service registry-loadbalancer -n "$NAMESPACE" --ignore-not-found=true
+        log_success "Registry LoadBalancer deleted"
+    fi
+
+    # Remove PVC (this will also trigger PV deletion if dynamically provisioned)
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get pvc registry-pvc -n "$NAMESPACE" &> /dev/null; then
+        log_warning "Deleting Registry persistent volume claim (data will be lost)..."
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete pvc registry-pvc -n "$NAMESPACE" --ignore-not-found=true
+        log_success "Registry PVC deleted"
+
+        # Wait a moment for PV cleanup
+        log_info "Waiting for persistent volume cleanup..."
+        sleep 5
+    fi
+}
+
 # Clean up Registry UI resources
 cleanup_registry_ui() {
     log_info "Cleaning up Registry UI resources..."
@@ -193,12 +237,14 @@ wait_for_cleanup() {
 
     while [[ $count -lt $max_wait ]]; do
         local portainer_pods
+        local registry_pods
         local registry_ui_pods
 
         portainer_pods=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -l app=portainer -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l || echo "0")
+        registry_pods=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -l app=registry -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l || echo "0")
         registry_ui_pods=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -l app=registry-ui -n "$NAMESPACE" --no-headers 2>/dev/null | wc -l || echo "0")
 
-        if [[ "$portainer_pods" -eq 0 && "$registry_ui_pods" -eq 0 ]]; then
+        if [[ "$portainer_pods" -eq 0 && "$registry_pods" -eq 0 && "$registry_ui_pods" -eq 0 ]]; then
             log_success "All pods terminated successfully"
             return 0
         fi
@@ -231,6 +277,22 @@ verify_cleanup() {
 
     if kubectl --kubeconfig="$KUBECONFIG_PATH" get pvc portainer-pvc -n "$NAMESPACE" &> /dev/null; then
         log_warning "Portainer PVC still exists"
+        ((remaining_resources++))
+    fi
+
+    # Check for remaining Registry resources
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment registry -n "$NAMESPACE" &> /dev/null; then
+        log_warning "Registry deployment still exists"
+        ((remaining_resources++))
+    fi
+
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-service -n "$NAMESPACE" &> /dev/null; then
+        log_warning "Registry service still exists"
+        ((remaining_resources++))
+    fi
+
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get pvc registry-pvc -n "$NAMESPACE" &> /dev/null; then
+        log_warning "Registry PVC still exists"
         ((remaining_resources++))
     fi
 
@@ -280,6 +342,8 @@ main() {
 
     cleanup_portainer
     echo ""
+    cleanup_registry
+    echo ""
     cleanup_registry_ui
     echo ""
     cleanup_orphaned_volumes
@@ -293,12 +357,10 @@ main() {
     echo ""
     echo "📋 Summary:"
     echo "  - Portainer deployment and associated resources removed"
+    echo "  - Docker Registry deployment and associated resources removed"
     echo "  - Registry UI deployment and associated resources removed"
     echo "  - Persistent volumes and data deleted"
     echo "  - RBAC resources cleaned up"
-    echo ""
-    echo "💡 Note: The Docker registry systemd service is still running"
-    echo "   Use 'sudo systemctl status docker-registry' to check status"
     echo ""
 }
 

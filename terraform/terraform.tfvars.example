@@ -1,19 +1,15 @@
 # Example Terraform variables file
 # Copy this to terraform.tfvars and customize for your environment
 
-# Network Configuration
-host_ip = "192.168.1.100"  # Replace with your Pi's IP address
-
 # Portainer Configuration
 portainer_admin_password = "homelab123!"      # Change this password!
 portainer_storage_size   = "2Gi"
-portainer_nodeport      = 32090
-portainer_nodeport_https = 32443
 
 # Registry Configuration
-registry_port            = 5000
-registry_ui_nodeport    = 32080
-allow_registry_deletion = true
+registry_image          = "registry:2.8"
+registry_port           = 5000              # External LoadBalancer port
+registry_storage_size   = "10Gi"            # Storage for registry data
+allow_registry_deletion = true              # Allow image deletion via UI
 
 # MetalLB Configuration
 metallb_pool_name = "homelab-services"
