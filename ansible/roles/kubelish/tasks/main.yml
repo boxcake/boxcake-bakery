@@ -35,7 +35,7 @@
   shell: |
     export GOPATH=/tmp/go-kubelish
     export GOBIN=/usr/local/bin
-    go install github.com/holoplot/kubelish/cmd/kubelish@latest
+    /usr/local/bin/go install github.com/holoplot/kubelish/cmd/kubelish@latest
     rm -rf /tmp/go-kubelish
   become: yes
   notify: restart kubelish

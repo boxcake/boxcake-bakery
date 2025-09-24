@@ -34,9 +34,22 @@
       - docker-compose
       - avahi-daemon
       - libnss-mdns
-      - golang-go
     state: present
   tags: [packages]
+
+- name: Install Go (latest version)
+  shell: |
+    GO_VERSION="1.23.4"
+    GO_ARCH="{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    wget -q "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -O /tmp/go.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf /tmp/go.tar.gz
+    rm /tmp/go.tar.gz
+    ln -sf /usr/local/go/bin/go /usr/local/bin/go
+    ln -sf /usr/local/go/bin/gofmt /usr/local/bin/gofmt
+  args:
+    creates: /usr/local/go/bin/go
+  tags: [tools]
 
 - name: Install yq (YAML processor)
   shell: |
