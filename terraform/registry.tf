@@ -80,6 +80,10 @@ resource "kubernetes_deployment" "registry" {
   spec {
     replicas = 1
 
+    strategy {
+      type = "Recreate"
+    }
+
     selector {
       match_labels = {
         app = "registry"
@@ -94,6 +98,18 @@ resource "kubernetes_deployment" "registry" {
       }
 
       spec {
+        # Ensure registry runs on the Kubernetes master/control plane node
+        node_selector = {
+          "node-role.kubernetes.io/control-plane" = "true"
+        }
+
+        # Tolerate master node taints
+        toleration {
+          key      = "node-role.kubernetes.io/control-plane"
+          operator = "Exists"
+          effect   = "NoSchedule"
+        }
+
         container {
           name  = "registry"
           image = var.registry_image

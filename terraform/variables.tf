@@ -42,7 +42,7 @@ variable "portainer_nodeport_https" {
 variable "registry_image" {
   description = "Docker registry container image"
   type        = string
-  default     = "registry:2.8"
+  default     = "registry:3.0"
 }
 
 variable "registry_port" {
