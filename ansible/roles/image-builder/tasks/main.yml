@@ -1,6 +1,0 @@
----
-- name: Build and push portainer-config image
-  include_tasks: build-portainer-config.yml
-  tags:
-    - images
-    - portainer-config

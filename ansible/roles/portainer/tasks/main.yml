@@ -313,6 +313,11 @@
     kubeconfig: "{{ kubeconfig_path }}"
   register: portainer_service_info
 
+- name: Configure Portainer (alternative method using direct script execution)
+  include_tasks: configure.yml
+  when: portainer_configure_via_ansible | default(false)
+  tags: [configure, portainer-config]
+
 - name: Display Portainer status
   debug:
     msg: |

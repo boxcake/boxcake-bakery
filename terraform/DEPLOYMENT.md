@@ -2,44 +2,31 @@
 
 This document outlines the correct order for deploying the homelab infrastructure.
 
-## Chicken-and-Egg Problem
-
-The custom images need to be pushed to the local registry, but the registry is deployed by Terraform.
-
 ## Deployment Steps
 
 ### 1. Run Ansible (Infrastructure Setup)
 
 ```bash
 cd ansible/
-# Deploy K3s, Docker, base infrastructure
-ansible-playbook -i inventory playbook.yml
+# Deploy K3s, Docker, base infrastructure, and Kubernetes services
+ansible-playbook -i inventory site.yml
 ```
 
-### 2. Deploy Core Services (Registry First)
+### 2. Deploy Services with Terraform/OpenTofu
 
 ```bash
 cd terraform/
+# Deploy container registry, portainer, etc.
 terraform init
-
-# Deploy only the registry service first
-terraform apply -target=kubernetes_service.registry_service -target=kubernetes_deployment.registry
+terraform apply
 ```
 
-### 3. Build and Push Custom Images
+### 3. Optional: Configure Portainer via Ansible
 
 ```bash
 cd ansible/
-# Now that registry is running, build and push images
-ansible-playbook -i inventory playbook.yml --tags images
-```
-
-### 4. Deploy Everything Else
-
-```bash
-cd terraform/
-# Deploy remaining services (including those needing custom images)
-terraform apply
+# Alternative method to configure Portainer directly from Ansible
+ansible-playbook -i inventory site.yml --tags portainer-config -e "portainer_configure_via_ansible=true"
 ```
 
 ## Image Dependencies
