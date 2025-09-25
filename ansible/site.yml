@@ -42,16 +42,13 @@
       tags: [opentofu, terraform, infrastructure]
 
   post_tasks:
-    - name: Wait for Portainer service to be ready
+    - name: Wait for Portainer service to exist
       kubernetes.core.k8s_info:
         api_version: v1
         kind: Service
         name: portainer-service
         namespace: default
         wait: true
-        wait_condition:
-          type: Ready
-          status: "True"
         wait_timeout: 300
         kubeconfig: "{{ kubeconfig_path }}"
       register: portainer_service_wait
