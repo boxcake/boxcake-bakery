@@ -137,7 +137,8 @@ resource "kubernetes_service" "registry_ui_service" {
     namespace = var.namespace
 
     annotations = {
-      "metallb.universe.tf/address-pool" = var.metallb_pool_name
+      # "metallb.universe.tf/address-pool" = var.metallb_pool_name
+      "metallb.io/address-pool" = var.metallb_pool_name
     }
   }
 

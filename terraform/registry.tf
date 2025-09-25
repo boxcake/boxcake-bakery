@@ -215,7 +215,8 @@ resource "kubernetes_service" "registry_loadbalancer" {
     namespace = var.namespace
 
     annotations = {
-      "metallb.universe.tf/address-pool" = var.metallb_pool_name
+      # "metallb.universe.tf/address-pool" = var.metallb_pool_name
+      "metallb.io/address-pool" = var.metallb_pool_name
     }
 
     labels = {
