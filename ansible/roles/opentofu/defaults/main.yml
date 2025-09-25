@@ -1,0 +1,5 @@
+---
+# Default variables for OpenTofu role
+terraform_directory: "{{ playbook_dir }}/../terraform"
+terraform_plan_only: false
+terraform_auto_approve: true

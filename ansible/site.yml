@@ -38,8 +38,46 @@
     - role: kubelish
       tags: [kubelish, mdns]
 
+    - role: opentofu
+      tags: [opentofu, terraform, infrastructure]
 
   post_tasks:
+    - name: Wait for Portainer service to be ready
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: portainer-service
+        namespace: default
+        wait: true
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_timeout: 300
+      register: portainer_service_wait
+      failed_when: false
+      tags: [portainer-config, configure]
+
+    - name: Wait for Portainer deployment to be available
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        name: portainer
+        namespace: default
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+      tags: [portainer-config, configure]
+
+    - name: Configure Portainer after OpenTofu deployment
+      include_role:
+        name: portainer
+        tasks_from: configure
+      vars:
+        k8s_namespace: default
+        portainer_admin_password: "{{ portainer_admin_password | default('homelab123!') }}"
+      tags: [portainer-config, configure]
     - name: Display completion message
       debug:
         msg: |
@@ -58,9 +96,9 @@
           - Registry UI (web interface)
           - All services with proper state management
           
-          🚀 Ready for OpenTofu deployment:
-          1. Navigate to terraform/ directory
-          2. Run 'tofu init' and 'tofu apply'
+          🚀 OpenTofu deployment completed automatically!
+          ✅ All services deployed and configured
+          ✅ Portainer configured with admin access
           3. Manage everything: sudo -u {{ homelab_user }} -i
           
           📊 LoadBalancer Status:

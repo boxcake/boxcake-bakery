@@ -1,0 +1,96 @@
+---
+- name: Check if OpenTofu is installed
+  command: tofu --version
+  register: tofu_version_check
+  failed_when: false
+  changed_when: false
+
+- name: Display OpenTofu version
+  debug:
+    msg: "OpenTofu version: {{ tofu_version_check.stdout_lines[0] if tofu_version_check.rc == 0 else 'Not installed' }}"
+
+- name: Fail if OpenTofu is not installed
+  fail:
+    msg: "OpenTofu is not installed. Please install OpenTofu first."
+  when: tofu_version_check.rc != 0
+
+- name: Check if Terraform directory exists
+  stat:
+    path: "{{ terraform_directory }}"
+  register: terraform_dir_stat
+
+- name: Fail if Terraform directory doesn't exist
+  fail:
+    msg: "Terraform directory {{ terraform_directory }} does not exist"
+  when: not terraform_dir_stat.stat.exists
+
+- name: Initialize OpenTofu
+  command: tofu init
+  args:
+    chdir: "{{ terraform_directory }}"
+  register: tofu_init_result
+  changed_when: "'Terraform has been successfully initialized' in tofu_init_result.stdout"
+
+- name: Display OpenTofu init output
+  debug:
+    var: tofu_init_result.stdout_lines
+  when: tofu_init_result.stdout_lines is defined
+
+- name: Plan OpenTofu changes
+  command: tofu plan -out=tfplan
+  args:
+    chdir: "{{ terraform_directory }}"
+  register: tofu_plan_result
+  when: terraform_plan_only | default(false)
+
+- name: Display OpenTofu plan output
+  debug:
+    var: tofu_plan_result.stdout_lines
+  when:
+    - terraform_plan_only | default(false)
+    - tofu_plan_result.stdout_lines is defined
+
+- name: Apply OpenTofu configuration
+  command: tofu apply -auto-approve
+  args:
+    chdir: "{{ terraform_directory }}"
+  register: tofu_apply_result
+  when: not (terraform_plan_only | default(false))
+
+- name: Display OpenTofu apply output
+  debug:
+    var: tofu_apply_result.stdout_lines
+  when:
+    - not (terraform_plan_only | default(false))
+    - tofu_apply_result.stdout_lines is defined
+
+- name: Get OpenTofu outputs
+  command: tofu output -json
+  args:
+    chdir: "{{ terraform_directory }}"
+  register: tofu_outputs_result
+  changed_when: false
+  when: not (terraform_plan_only | default(false))
+
+- name: Parse OpenTofu outputs
+  set_fact:
+    terraform_outputs: "{{ tofu_outputs_result.stdout | from_json }}"
+  when:
+    - not (terraform_plan_only | default(false))
+    - tofu_outputs_result.stdout is defined
+
+- name: Display deployment summary
+  debug:
+    msg: |
+      🚀 OpenTofu Deployment Complete!
+
+      📊 Status: {{ 'Plan completed' if terraform_plan_only | default(false) else 'Applied successfully' }}
+      📁 Directory: {{ terraform_directory }}
+
+      {% if terraform_outputs is defined %}
+      🔗 Outputs:
+      {% for key, value in terraform_outputs.items() %}
+      - {{ key }}: {{ value.value }}
+      {% endfor %}
+      {% endif %}
+  when: not (terraform_plan_only | default(false))
