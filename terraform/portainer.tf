@@ -165,6 +165,10 @@ resource "kubernetes_service" "portainer_service" {
   spec {
     type = "LoadBalancer"
 
+    strategy {
+      type = "Recreate"
+    }
+
     port {
       name        = "http"
       port        = 80
