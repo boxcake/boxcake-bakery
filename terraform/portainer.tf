@@ -162,6 +162,9 @@ resource "kubernetes_service" "portainer_service" {
     namespace = var.namespace
 
     annotations = {
+        "kubelish/service-name" = "portainer"
+        "kubelish/service-type" = "_portainerui._tcp"
+        "kubelish/txt" = "Portainer container management UI"
       # "metallb.universe.tf/address-pool" = var.metallb_pool_name
       "metallb.io/address-pool" = var.metallb_pool_name
     }
