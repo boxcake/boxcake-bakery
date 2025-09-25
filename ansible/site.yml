@@ -72,14 +72,8 @@
         kubeconfig: "{{ kubeconfig_path }}"
       tags: [portainer-config, configure]
 
-    - name: Configure Portainer after OpenTofu deployment
-      include_role:
-        name: portainer
-        tasks_from: configure
-      vars:
-        k8s_namespace: default
-        portainer_admin_password: "{{ portainer_admin_password | default('homelab123!') }}"
-      tags: [portainer-config, configure]
+    # Portainer configuration is now handled by Terraform deployment
+    # Configuration happens automatically via the deployed container
     - name: Display completion message
       debug:
         msg: |
