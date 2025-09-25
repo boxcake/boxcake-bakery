@@ -38,6 +38,9 @@
     - role: kubelish
       tags: [kubelish, mdns]
 
+    - role: image-builder
+      tags: [images, docker]
+
 
   post_tasks:
     - name: Display completion message
