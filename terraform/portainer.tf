@@ -80,6 +80,10 @@ resource "kubernetes_deployment" "portainer" {
       spec {
         service_account_name = kubernetes_service_account.portainer_sa.metadata[0].name
 
+        strategy {
+            type = "Recreate"
+        }
+    
         container {
           name  = "portainer"
           image = var.portainer_image
@@ -164,10 +168,6 @@ resource "kubernetes_service" "portainer_service" {
 
   spec {
     type = "LoadBalancer"
-
-    strategy {
-      type = "Recreate"
-    }
 
     port {
       name        = "http"
