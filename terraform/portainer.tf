@@ -64,6 +64,10 @@ resource "kubernetes_deployment" "portainer" {
   spec {
     replicas = 1
 
+    strategy {
+        type = "Recreate"
+    }
+    
     selector {
       match_labels = {
         app = "portainer"
@@ -80,10 +84,6 @@ resource "kubernetes_deployment" "portainer" {
       spec {
         service_account_name = kubernetes_service_account.portainer_sa.metadata[0].name
 
-        strategy {
-            type = "Recreate"
-        }
-    
         container {
           name  = "portainer"
           image = var.portainer_image
