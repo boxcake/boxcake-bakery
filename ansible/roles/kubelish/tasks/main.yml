@@ -31,6 +31,13 @@
     mode: '0755'
   become: yes
 
+- name: Check if kubelish binary exists and is working
+  command: /usr/local/bin/kubelish --version
+  register: kubelish_version_check
+  failed_when: false
+  changed_when: false
+  become: yes
+
 - name: Install kubelish binary via Go
   shell: |
     export GOPATH=/tmp/go-kubelish
@@ -39,6 +46,16 @@
     rm -rf /tmp/go-kubelish
   become: yes
   notify: restart kubelish
+  when: kubelish_version_check.rc != 0
+
+- name: Display kubelish installation status
+  debug:
+    msg: |
+      {% if kubelish_version_check.rc == 0 %}
+      ✅ kubelish already installed: {{ kubelish_version_check.stdout }}
+      {% else %}
+      ⬇️ kubelish downloaded and installed
+      {% endif %}
 
 - name: Create temporary directory for Kubernetes manifests
   tempfile:
