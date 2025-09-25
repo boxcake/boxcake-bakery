@@ -53,6 +53,7 @@
           type: Ready
           status: "True"
         wait_timeout: 300
+        kubeconfig: "{{ kubeconfig_path }}"
       register: portainer_service_wait
       failed_when: false
       tags: [portainer-config, configure]
@@ -68,6 +69,7 @@
           type: Available
           status: "True"
         wait_timeout: 300
+        kubeconfig: "{{ kubeconfig_path }}"
       tags: [portainer-config, configure]
 
     - name: Configure Portainer after OpenTofu deployment
