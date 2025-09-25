@@ -67,7 +67,7 @@ resource "kubernetes_deployment" "portainer" {
     strategy {
         type = "Recreate"
     }
-    
+
     selector {
       match_labels = {
         app = "portainer"

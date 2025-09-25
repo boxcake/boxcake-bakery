@@ -16,7 +16,7 @@ kubectl_version: "1.29.0"
 # Registry configuration
 registry_port: 5000
 registry_data_dir: "/opt/registry/data"
-registry_image: "registry:2.8"
+registry_image: "registry:3.0.0"
 
 # Service ports
 portainer_nodeport: 32090

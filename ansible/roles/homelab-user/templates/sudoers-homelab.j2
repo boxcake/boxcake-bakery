@@ -1,19 +1,8 @@
 # {{ ansible_managed }}
-# Sudo permissions for homelab user
+# Sudo permissions for homelab infrastructure
 
-# Allow homelab user to manage specific services
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl start docker-registry
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl stop docker-registry  
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart docker-registry
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl status docker-registry
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/journalctl -u docker-registry*
+# Allow users in homelab group to manage homelab services and tools
+%{{ homelab_group }} ALL=(ALL) NOPASSWD: /bin/systemctl start docker-registry, /bin/systemctl stop docker-registry, /bin/systemctl restart docker-registry, /bin/systemctl status docker-registry, /bin/journalctl -u docker-registry*, /usr/local/bin/k3s ctr images*, /bin/systemctl restart networking, /sbin/iptables *
 
-# Allow homelab user to manage K3s images
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /usr/local/bin/k3s ctr images*
-
-# Allow admin user to switch to homelab user without password
-{{ admin_user }} ALL=({{ homelab_user }}) NOPASSWD: ALL
-
-# Allow homelab user to restart networking if needed
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /bin/systemctl restart networking
-{{ homelab_user }} ALL=(ALL) NOPASSWD: /sbin/iptables *
+# Allow users in homelab group to switch to homelab user without password
+%{{ homelab_group }} ALL=({{ homelab_user }}) NOPASSWD: ALL
