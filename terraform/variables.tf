@@ -17,7 +17,7 @@ variable "portainer_admin_password" {
 variable "portainer_image" {
   description = "Portainer container image"
   type        = string
-  default     = "portainer/portainer-ce:2.19.4"
+  default     = "portainer/portainer-ce:2.33.2-alpine"
 }
 
 variable "portainer_storage_size" {
