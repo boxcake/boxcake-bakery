@@ -26,7 +26,7 @@ registry_ui_nodeport: 32080
 # Portainer configuration
 portainer_storage_size: "200Mi"
 portainer_image: "portainer/portainer-ce:latest"
-portainer_admin_password: "homelab123"  # Change this for production
+portainer_admin_password: "TheHomeLab5!"  # Change this for production
 
 # Security settings
 allow_registry_deletion: true
