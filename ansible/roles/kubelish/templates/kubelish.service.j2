@@ -1,17 +1,13 @@
 # roles/kubelish/templates/kubelish.service.j2
 [Unit]
 Description=Kubelish mDNS announcer for Kubernetes LoadBalancer services
-After=network.target
-Wants=avahi-daemon.service
+After=avahi-daemon.service
 
 [Service]
-Type=simple
-Environment="KUBERNETES_API_URL={{ kubernetes_api_url }}"
-Environment="KUBERNETES_API_TOKEN={{ kubelish_sa_token }}"
-ExecStart=/usr/local/bin/kubelish watch
+Type=notify
+Environment="KUBECONFIG={{ kubeconfig_path }}"
+ExecStart=/usr/local/bin/kubelish --namespace default watch
 Restart=always
-RestartSec={{ kubelish_restart_sec }}
-LimitNOFILE={{ kubelish_limit_nofile }}
 User=nobody
 Group=nogroup
 
