@@ -186,6 +186,8 @@ resource "kubernetes_service" "portainer_service" {
 }
 
 # Configuration Job for Portainer
+# DEPENDENCY: Requires 'ansible/roles/image-builder' to be run first
+# to build and push the portainer-config:latest image to the local registry
 resource "kubernetes_job" "portainer_configure" {
   metadata {
     name      = "portainer-configure"
@@ -209,7 +211,7 @@ resource "kubernetes_job" "portainer_configure" {
 
         container {
           name  = "configure"
-          image = "curlimages/curl:8.4.0"
+          image = "registry-service:5000/portainer-config:latest"
 
           command = ["/bin/sh"]
           args = [

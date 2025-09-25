@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 
-# Install jq and other tools for JSON processing and network debugging
-apk add --no-cache jq curl bind-tools
+# Dependencies are pre-installed in the custom image
 
 echo "🚀 Configuring Portainer..."
 

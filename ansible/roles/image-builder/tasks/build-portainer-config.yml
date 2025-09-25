@@ -1,0 +1,53 @@
+---
+- name: Create build directory for portainer-config
+  file:
+    path: /tmp/portainer-config-build
+    state: directory
+    mode: '0755'
+
+- name: Copy Dockerfile for portainer-config
+  copy:
+    src: Dockerfile
+    dest: /tmp/portainer-config-build/Dockerfile
+    mode: '0644'
+
+- name: Build portainer-config Docker image
+  docker_image:
+    build:
+      path: /tmp/portainer-config-build
+      pull: yes
+    name: portainer-config
+    tag: latest
+    source: build
+    state: present
+
+- name: Get registry service cluster IP
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Service
+    name: registry-service
+    namespace: "{{ k8s_namespace | default('default') }}"
+  register: registry_service
+
+- name: Set registry endpoint
+  set_fact:
+    registry_endpoint: "{{ registry_service.resources[0].spec.clusterIP }}:5000"
+
+- name: Tag image for local registry
+  docker_image:
+    name: portainer-config:latest
+    repository: "{{ registry_endpoint }}/portainer-config"
+    tag: latest
+    source: local
+
+- name: Push image to local registry
+  docker_image:
+    name: "{{ registry_endpoint }}/portainer-config"
+    tag: latest
+    push: yes
+    source: local
+
+- name: Clean up build directory
+  file:
+    path: /tmp/portainer-config-build
+    state: absent
