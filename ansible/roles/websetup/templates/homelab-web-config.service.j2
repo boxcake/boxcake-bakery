@@ -1,0 +1,23 @@
+[Unit]
+Description=Home Lab Web Configuration Interface
+After=network.target
+
+[Service]
+Type=simple
+User={{ homelab_user }}
+Group={{ homelab_group }}
+WorkingDirectory={{ homelab_home }}/web-config/backend
+Environment=PATH={{ homelab_home }}/web-config/backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH={{ homelab_home }}/web-config/backend
+ExecStart={{ homelab_home }}/web-config/backend/venv/bin/python main.py
+Restart=always
+RestartSec=5
+
+# Security settings (relaxed to allow sudo)
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

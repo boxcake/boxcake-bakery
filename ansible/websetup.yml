@@ -1,0 +1,27 @@
+---
+- name: Stage 1 - Web Configuration Setup
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    homelab_user: "homelab"
+    homelab_group: "homelab"
+    homelab_home: "/opt/homelab"
+
+  roles:
+    - websetup
+
+  post_tasks:
+    - name: Final message
+      debug:
+        msg: |
+          🎉 Stage 1 complete!
+
+          The web configuration interface is now running.
+          Visit http://{{ ansible_default_ipv4.address }}:8080 to configure your homelab.
+
+          After configuring settings through the web interface:
+          - Your configuration will be saved to {{ homelab_home }}/configs/
+          - The full homelab deployment will begin automatically
+
+          Stage 2 (full deployment) will run from {{ homelab_home }} with the homelab user.

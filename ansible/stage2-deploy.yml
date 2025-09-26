@@ -1,0 +1,63 @@
+---
+- name: Stage 2 - Full Home Lab Deployment
+  hosts: localhost
+  connection: local
+  become: yes
+  vars:
+    homelab_user: "homelab"
+    homelab_group: "homelab"
+    homelab_home: "/opt/homelab"
+
+  pre_tasks:
+    - name: Load user configuration
+      include_vars: "{{ homelab_home }}/configs/user-config.yaml"
+      when: (homelab_home + '/configs/user-config.yaml') | file_exists
+
+    - name: Load network configuration
+      include_vars: "{{ homelab_home }}/configs/network-defaults.yaml"
+      when: (homelab_home + '/configs/network-defaults.yaml') | file_exists
+
+  roles:
+    - k3s
+    - longhorn
+    - metallb
+    - role: portainer
+      when: deployment.services.portainer | default(false)
+    - role: registry
+      when: deployment.services.registry | default(false)
+    - role: registry-ui
+      when: deployment.services.registry_ui | default(false)
+
+  post_tasks:
+    - name: Apply additional Terraform resources if needed
+      shell: |
+        cd {{ homelab_home }}/terraform
+        if [ -f user.tfvars ]; then
+          tofu init
+          tofu apply -auto-approve -var-file=user.tfvars
+        fi
+      become_user: "{{ homelab_user }}"
+      when: deployment.services.additional_terraform | default(false)
+
+    - name: Final deployment summary
+      debug:
+        msg: |
+          🎉 Stage 2 Deployment Complete!
+
+          Your homelab is now running with the following services:
+          {% if deployment.services.portainer | default(false) %}
+          • Portainer - Container Management UI
+          {% endif %}
+          {% if deployment.services.registry | default(false) %}
+          • Docker Registry - Private container registry
+          {% endif %}
+          {% if deployment.services.registry_ui | default(false) %}
+          • Registry UI - Web interface for registry
+          {% endif %}
+
+          Access your services through the configured network:
+          • Pod CIDR: {{ network.pod_cidr | default('10.42.0.0/16') }}
+          • Service CIDR: {{ network.service_cidr | default('10.43.0.0/16') }}
+
+          🌐 Web interface still available at: http://{{ ansible_default_ipv4.address }}:8080
+          📁 All configuration files in: {{ homelab_home }}/configs/

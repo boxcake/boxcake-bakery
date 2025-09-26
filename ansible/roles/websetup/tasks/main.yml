@@ -1,0 +1,138 @@
+---
+- name: Install system dependencies
+  package:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - git
+      - curl
+      - rsync
+    state: present
+  become: yes
+
+- name: Create homelab user
+  user:
+    name: "{{ homelab_user }}"
+    home: "{{ homelab_home }}"
+    shell: /bin/bash
+    create_home: yes
+    system: no
+  become: yes
+
+- name: Add homelab user to sudo group
+  user:
+    name: "{{ homelab_user }}"
+    groups: sudo
+    append: yes
+  become: yes
+
+- name: Create sudoers file for homelab user
+  copy:
+    content: |
+      # Allow homelab user to run all commands without password
+      {{ homelab_user }} ALL=(ALL) NOPASSWD: ALL
+    dest: "/etc/sudoers.d/{{ homelab_user }}"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  become: yes
+
+- name: Ensure /opt/homelab directory exists
+  file:
+    path: "{{ homelab_home }}"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+  become: yes
+
+- name: Copy project files to /opt/homelab
+  synchronize:
+    src: "{{ ansible_env.PWD }}/../"
+    dest: "{{ homelab_home }}/"
+    delete: no
+    recursive: yes
+    owner: no
+    group: no
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=__pycache__"
+      - "--exclude=*.pyc"
+      - "--exclude=node_modules"
+      - "--exclude=build"
+      - "--exclude=dist"
+  become: yes
+
+- name: Set ownership of /opt/homelab
+  file:
+    path: "{{ homelab_home }}"
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    recurse: yes
+  become: yes
+
+- name: Install Node.js (required for web interface)
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+  become: yes
+
+- name: Create Python virtual environment for web service
+  command: python3 -m venv {{ homelab_home }}/web-config/backend/venv
+  become_user: "{{ homelab_user }}"
+  creates: "{{ homelab_home }}/web-config/backend/venv"
+
+- name: Install Python dependencies
+  pip:
+    requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
+    virtualenv: "{{ homelab_home }}/web-config/backend/venv"
+  become_user: "{{ homelab_user }}"
+
+- name: Build React frontend
+  shell: |
+    cd {{ homelab_home }}/web-config/frontend
+    npm install
+    npm run build
+  become_user: "{{ homelab_user }}"
+
+- name: Create systemd service for web configuration interface
+  template:
+    src: homelab-web-config.service.j2
+    dest: /etc/systemd/system/homelab-web-config.service
+    mode: '0644'
+  become: yes
+  notify: restart homelab-web-config
+
+- name: Enable and start web configuration service
+  systemd:
+    name: homelab-web-config
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+
+- name: Wait for web service to be ready
+  uri:
+    url: "http://localhost:8080/api/health"
+    method: GET
+  register: health_check
+  retries: 30
+  delay: 2
+  until: health_check.status == 200
+
+- name: Get host IP address
+  shell: hostname -I | awk '{print $1}'
+  register: host_ip
+
+- name: Display setup completion message
+  debug:
+    msg: |
+      🚀 Initial setup complete!
+
+      Web configuration interface is ready at:
+      http://{{ host_ip.stdout }}:8080
+
+      Next steps:
+      1. Visit the web interface
+      2. Configure your homelab settings
+      3. Click 'Deploy Now' to complete the installation

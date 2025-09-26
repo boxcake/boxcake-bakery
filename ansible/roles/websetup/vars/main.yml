@@ -1,0 +1,4 @@
+---
+homelab_user: "homelab"
+homelab_group: "homelab"
+homelab_home: "/opt/homelab"

@@ -199,12 +199,11 @@ class DeploymentManager:
         os.chdir(self.ansible_dir)
 
         try:
-            # Run the main site.yml playbook - we're already running as homelab user with sudo permissions
+            # Run the Stage 2 deployment playbook - we're already running as homelab user with sudo permissions
             cmd = [
                 "sudo", ansible_playbook_cmd,
                 "-i", "inventory/hosts.yml",
-                "site.yml",
-                "--skip-tags", "bootstrap"  # Skip bootstrap since we're already past that
+                "stage2-deploy.yml"
             ]
 
             await self._add_log(deployment_id, f"Running: {' '.join(cmd)}")

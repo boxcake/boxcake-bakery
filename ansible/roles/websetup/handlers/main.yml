@@ -1,0 +1,7 @@
+---
+- name: restart homelab-web-config
+  systemd:
+    name: homelab-web-config
+    state: restarted
+    daemon_reload: yes
+  become: yes
