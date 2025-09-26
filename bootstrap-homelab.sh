@@ -52,7 +52,8 @@ apt-get install -y \
 # Create homelab user and group
 echo "👤 Creating homelab user..."
 if ! id "homelab" &>/dev/null; then
-    useradd -m -s /bin/bash -d /opt/homelab homelab
+    userdel homelab
+    useradd -m -s /bin/bash -d /home/homelab homelab
     usermod -aG sudo homelab
 
     # Create sudoers file for homelab user
@@ -65,11 +66,18 @@ EOF
     # Validate sudoers file
     visudo -cf /etc/sudoers.d/homelab
 
-# TODO: else  - we need to verify that the existing home dir for the homelab user is our install_dir and use usermod if its not
 fi
 
 # Delete old working directories
-cd ${INSTALL_DIR} && rm -rf ${INSTALL_DIR}/* || exit
+rm -rf ${INSTALL_DIR}
+mkdir -p ${INSTALL_DIR}
+chown homelab:homelab ${INSTALL_DIR}
+chmod g+s ${INSTALL_DIR}
+
+# Become the homelab user
+su homelab -
+
+cd ${INSTALL_DIR}
 
 # Shallow clone the repo into the install directory
 git clone --depth 1 https://github.com/boxcake/boxcake-bakery.git ./
