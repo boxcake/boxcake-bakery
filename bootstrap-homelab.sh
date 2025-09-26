@@ -69,9 +69,10 @@ EOF
 fi
 
 # Delete old working directories
-rm -rf /opt/homelab/*
+cd ${INSTALL_DIR} && rm -rf ${INSTALL_DIR}/* || exit
 
-# Create homelab directory structure
+# Shallow clone the repo into the install directory
+git clone --depth 1 https://github.com/boxcake/boxcake-bakery.git ./
 
 # Set up Python virtual environment for Ansible
 VENV_PATH="${INSTALL_DIR}/venv"
