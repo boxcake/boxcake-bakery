@@ -11,6 +11,7 @@
     pip_path: /opt/homelab/venv/bin/pip
 
   roles:
+    - opentofu
     - websetup
 
   post_tasks:

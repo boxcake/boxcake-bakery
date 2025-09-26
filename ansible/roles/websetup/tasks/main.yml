@@ -2,15 +2,6 @@
 
 # Homelab user is now created by bootstrap-homelab.sh script
 
-- name: Ensure /opt/homelab directory exists
-  file:
-    path: "{{ homelab_home }}"
-    state: directory
-    owner: "{{ homelab_user }}"
-    group: "{{ homelab_user }}"
-    mode: '0755'
-  become: yes
-
 - name: Create logs directory
   file:
     path: "{{ homelab_home }}/logs"
@@ -18,31 +9,6 @@
     owner: "{{ homelab_user }}"
     group: "{{ homelab_user }}"
     mode: '0755'
-  become: yes
-
-- name: Copy project files to /opt/homelab
-  synchronize:
-    src: "{{ ansible_env.PWD }}/../"
-    dest: "{{ homelab_home }}/"
-    delete: no
-    recursive: yes
-    owner: no
-    group: no
-    rsync_opts:
-      - "--exclude=.git"
-      - "--exclude=__pycache__"
-      - "--exclude=*.pyc"
-      - "--exclude=node_modules"
-      - "--exclude=build"
-      - "--exclude=dist"
-  become: yes
-
-- name: Set ownership of /opt/homelab
-  file:
-    path: "{{ homelab_home }}"
-    owner: "{{ homelab_user }}"
-    group: "{{ homelab_user }}"
-    recurse: yes
   become: yes
 
 - name: Install Node.js (required for web interface)
