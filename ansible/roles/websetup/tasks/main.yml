@@ -78,7 +78,7 @@
   become: yes
 
 - name: Create Python virtual environment for web service
-  command: python3 -m venv {{ homelab_home }}/web-config/backend/venv
+  shell: python3 -m venv {{ homelab_home }}/web-config/backend/venv
   become_user: "{{ homelab_user }}"
   creates: "{{ homelab_home }}/web-config/backend/venv"
 
