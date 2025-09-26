@@ -9,13 +9,23 @@
     homelab_home: "/opt/homelab"
 
   pre_tasks:
+    - name: Check if user configuration exists
+      stat:
+        path: "{{ homelab_home }}/configs/user-config.yaml"
+      register: user_config_stat
+
     - name: Load user configuration
       include_vars: "{{ homelab_home }}/configs/user-config.yaml"
-      when: (homelab_home + '/configs/user-config.yaml') | file_exists
+      when: user_config_stat.stat.exists
+
+    - name: Check if network configuration exists
+      stat:
+        path: "{{ homelab_home }}/configs/network-defaults.yaml"
+      register: network_config_stat
 
     - name: Load network configuration
       include_vars: "{{ homelab_home }}/configs/network-defaults.yaml"
-      when: (homelab_home + '/configs/network-defaults.yaml') | file_exists
+      when: network_config_stat.stat.exists
 
   roles:
     - k3s
