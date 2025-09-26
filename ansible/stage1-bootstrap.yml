@@ -105,15 +105,15 @@
         fi
         chown -R {{ homelab_user }}:{{ homelab_group }} {{ homelab_home }}/.ansible
 
-    - name: Create Python virtual environment for web service
+    - name: Create centralized Python virtual environment
       shell: |
-        sudo -u {{ homelab_user }} python3 -m venv "{{ homelab_home }}/web-config/backend/venv"
+        sudo -u {{ homelab_user }} python3 -m venv "{{ homelab_home }}/venv"
       args:
-        creates: "{{ homelab_home }}/web-config/backend/venv"
+        creates: "{{ homelab_home }}/venv"
 
     - name: Install Python dependencies
       shell: |
-        sudo -u {{ homelab_user }} {{ homelab_home }}/web-config/backend/venv/bin/pip install -r {{ homelab_home }}/web-config/backend/requirements.txt
+        sudo -u {{ homelab_user }} {{ homelab_home }}/venv/bin/pip install -r {{ homelab_home }}/web-config/backend/requirements.txt
 
     - name: Install npm dependencies
       shell: |

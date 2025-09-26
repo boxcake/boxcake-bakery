@@ -7,9 +7,9 @@ Type=simple
 User={{ homelab_user }}
 Group={{ homelab_group }}
 WorkingDirectory={{ homelab_home }}/web-config/backend
-Environment=PATH={{ homelab_home }}/web-config/backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH={{ homelab_home }}/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONPATH={{ homelab_home }}/web-config/backend
-ExecStart={{ homelab_home }}/web-config/backend/venv/bin/python main.py
+ExecStart={{ homelab_home }}/venv/bin/python main.py
 Restart=always
 RestartSec=5
 

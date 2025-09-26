@@ -79,19 +79,19 @@
 
 - name: Check if Python virtual environment exists
   stat:
-    path: "{{ homelab_home }}/web-config/backend/venv/bin/activate"
+    path: "{{ homelab_home }}/venv/bin/activate"
   register: venv_exists
 
-- name: Create Python virtual environment for web service
-  shell: python3 -m venv {{ homelab_home }}/web-config/backend/venv
+- name: Create centralized Python virtual environment
+  shell: python3 -m venv {{ homelab_home }}/venv
   become_user: "{{ homelab_user }}"
   become: yes
   when: not venv_exists.stat.exists
 
-- name: Install Python dependencies
+- name: Install Python dependencies for web service
   pip:
     requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
-    virtualenv: "{{ homelab_home }}/web-config/backend/venv"
+    virtualenv: "{{ homelab_home }}/venv"
   become_user: "{{ homelab_user }}"
   become: yes
 
