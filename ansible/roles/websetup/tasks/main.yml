@@ -46,6 +46,15 @@
     mode: '0755'
   become: yes
 
+- name: Create logs directory
+  file:
+    path: "{{ homelab_home }}/logs"
+    state: directory
+    owner: "{{ homelab_user }}"
+    group: "{{ homelab_user }}"
+    mode: '0755'
+  become: yes
+
 - name: Copy project files to /opt/homelab
   synchronize:
     src: "{{ ansible_env.PWD }}/../"
