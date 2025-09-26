@@ -5,6 +5,7 @@ set -e
 # This script sets up the web configuration interface for your homelab
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_DIR="/opt/homelab"
 
 echo "🚀 Starting Home Lab Bootstrap (Stage 1)"
 echo "========================================="
@@ -15,6 +16,10 @@ if [[ $EUID -ne 0 ]]; then
    echo "Usage: sudo ./bootstrap-homelab.sh"
    exit 1
 fi
+
+# TODO:
+#  Prompt user if the /opt/homelab directory already exists
+#  y/n to deleting the contents of the install directory - exit if n
 
 # Ensure required system packages are installed
 echo "📦 Installing system dependencies..."
@@ -43,6 +48,7 @@ apt-get install -y \
   avahi-daemon \
   libnss-mdns
 
+
 # Create homelab user and group
 echo "👤 Creating homelab user..."
 if ! id "homelab" &>/dev/null; then
@@ -58,12 +64,18 @@ EOF
 
     # Validate sudoers file
     visudo -cf /etc/sudoers.d/homelab
+
+# TODO: else  - we need to verify that the existing home dir for the homelab user is our install_dir and use usermod if its not
 fi
+
+# Delete old working directories
+rm -rf /opt/homelab/*
 
 # Create homelab directory structure
 
 # Set up Python virtual environment for Ansible
-VENV_PATH="/opt/homelab/venv"
+VENV_PATH="${INSTALL_DIR}/venv"
+
 if [ ! -d "$VENV_PATH" ]; then
     echo "🐍 Creating Python virtual environment..."
     python3 -m venv "$VENV_PATH"
@@ -74,6 +86,8 @@ echo "📦 Installing Ansible in virtual environment..."
 source "$VENV_PATH/bin/activate"
 pip install --upgrade pip
 pip install ansible
+
+exit
 
 # Set proper ownership and permissions for homelab user
 echo "🔐 Setting permissions for homelab user..."
