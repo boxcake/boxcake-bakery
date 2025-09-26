@@ -85,6 +85,7 @@
 - name: Create Python virtual environment for web service
   shell: python3 -m venv {{ homelab_home }}/web-config/backend/venv
   become_user: "{{ homelab_user }}"
+  become: yes
   when: not venv_exists.stat.exists
 
 - name: Install Python dependencies
@@ -92,6 +93,7 @@
     requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
     virtualenv: "{{ homelab_home }}/web-config/backend/venv"
   become_user: "{{ homelab_user }}"
+  become: yes
 
 - name: Build React frontend
   shell: |
@@ -99,6 +101,7 @@
     npm install
     npm run build
   become_user: "{{ homelab_user }}"
+  become: yes
 
 - name: Create systemd service for web configuration interface
   template:
