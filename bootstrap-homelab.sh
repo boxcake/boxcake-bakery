@@ -16,14 +16,30 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Check if we have Ansible installed
-if ! command -v ansible-playbook &> /dev/null; then
-    echo "📦 Installing Ansible..."
-    apt-get update
-    apt-get install -y software-properties-common
-    add-apt-repository --yes --update ppa:ansible/ansible
-    apt-get install -y ansible
+# Ensure required system packages are installed
+echo "📦 Installing system dependencies..."
+apt-get update
+apt-get install -y python3 python3-venv python3-pip
+
+# Create homelab directory structure
+echo "📁 Creating /opt/homelab directory..."
+mkdir -p /opt/homelab
+
+# Set up Python virtual environment for Ansible
+VENV_PATH="/opt/homelab/venv"
+if [ ! -d "$VENV_PATH" ]; then
+    echo "🐍 Creating Python virtual environment..."
+    python3 -m venv "$VENV_PATH"
 fi
+
+# Activate virtual environment and install Ansible
+echo "📦 Installing Ansible in virtual environment..."
+source "$VENV_PATH/bin/activate"
+pip install --upgrade pip
+pip install ansible
+
+# Add venv to PATH for this script
+export PATH="$VENV_PATH/bin:$PATH"
 
 # Change to ansible directory
 cd "${SCRIPT_DIR}/ansible"
