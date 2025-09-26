@@ -53,33 +53,67 @@
     - terraform_plan_only | default(false)
     - tofu_plan_result.stdout_lines is defined
 
+- name: Ensure logs directory exists for OpenTofu
+  file:
+    path: "{{ homelab_home | default('/opt/homelab') }}/logs"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_gid }}"
+    mode: '0755'
+  become: yes
+
 - name: Apply OpenTofu configuration with logging
   shell: |
     set -e
-    echo "Starting OpenTofu apply at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-    echo "Working directory: $(pwd)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
-    # Run tofu apply with output only to log file to avoid Ansible buffer overflow
-    echo "Running: tofu apply -auto-approve" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-    tofu apply -auto-approve >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log 2>&1
-    TOFU_EXIT_CODE=$?
+    # Debug information
+    echo "=== OpenTofu Apply Debug Info ==="
+    echo "Current user: $(whoami)"
+    echo "Current directory: $(pwd)"
+    echo "Logs directory exists: $(ls -la {{ homelab_home | default('/opt/homelab') }}/logs/ 2>/dev/null || echo 'NO')"
+    echo "Can write to logs: $(touch {{ homelab_home | default('/opt/homelab') }}/logs/test 2>/dev/null && echo 'YES' || echo 'NO')"
 
-    echo "OpenTofu apply completed with exit code: $TOFU_EXIT_CODE at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    # Create log file with initial debug info
+    LOG_FILE="{{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log"
+    echo "=== OpenTofu Apply Started at $(date) ===" > "$LOG_FILE"
+    echo "User: $(whoami)" >> "$LOG_FILE"
+    echo "Working directory: $(pwd)" >> "$LOG_FILE"
+    echo "Terraform directory: {{ terraform_directory }}" >> "$LOG_FILE"
+    echo "Files in terraform directory:" >> "$LOG_FILE"
+    ls -la . >> "$LOG_FILE" 2>&1
 
-    # If failed, also log error details
-    if [ $TOFU_EXIT_CODE -ne 0 ]; then
-      echo "ERROR: OpenTofu apply failed with exit code $TOFU_EXIT_CODE" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-      echo "Attempting to capture state information..." >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-      tofu show -json >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-state.json 2>&1 || echo "Could not capture state" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-    else
-      echo "SUCCESS: OpenTofu apply completed successfully" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    # Check if tofu command exists
+    if ! command -v tofu >/dev/null 2>&1; then
+      echo "ERROR: tofu command not found in PATH" >> "$LOG_FILE"
+      echo "PATH: $PATH" >> "$LOG_FILE"
+      echo "Available commands: $(ls /usr/local/bin/ | grep -i tofu || echo 'none')" >> "$LOG_FILE"
+      echo "ERROR: tofu command not found"
+      exit 1
     fi
 
-    # Output a summary for Ansible (short message)
-    if [ $TOFU_EXIT_CODE -eq 0 ]; then
-      echo "OpenTofu apply successful - check /opt/homelab/logs/tofu-apply.log for details"
+    echo "tofu version: $(tofu version)" >> "$LOG_FILE" 2>&1
+
+    # Run tofu apply with output to log file
+    echo "Running: tofu apply -auto-approve" >> "$LOG_FILE"
+    echo "=== OpenTofu Apply Output ===" >> "$LOG_FILE"
+
+    if tofu apply -auto-approve >> "$LOG_FILE" 2>&1; then
+      TOFU_EXIT_CODE=0
+      echo "SUCCESS: OpenTofu apply completed successfully at $(date)" >> "$LOG_FILE"
+      echo "OpenTofu apply successful - check $LOG_FILE for details"
     else
-      echo "OpenTofu apply failed with exit code $TOFU_EXIT_CODE - check /opt/homelab/logs/tofu-apply.log for details"
+      TOFU_EXIT_CODE=$?
+      echo "ERROR: OpenTofu apply failed with exit code $TOFU_EXIT_CODE at $(date)" >> "$LOG_FILE"
+      echo "Attempting to capture additional debug info..." >> "$LOG_FILE"
+
+      # Try to get more debug info
+      echo "=== Terraform State ===" >> "$LOG_FILE"
+      tofu show >> "$LOG_FILE" 2>&1 || echo "Could not show state" >> "$LOG_FILE"
+
+      echo "=== Terraform Configuration ===" >> "$LOG_FILE"
+      find . -name "*.tf" -exec echo "File: {}" >> "$LOG_FILE" \; -exec cat {} >> "$LOG_FILE" \; 2>/dev/null || true
+
+      echo "OpenTofu apply failed with exit code $TOFU_EXIT_CODE - check $LOG_FILE for details"
     fi
 
     exit $TOFU_EXIT_CODE
