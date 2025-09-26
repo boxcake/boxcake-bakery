@@ -27,6 +27,12 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
+# Clean any existing build
+if [ -d "../build" ]; then
+    echo -e "${YELLOW}🧹 Cleaning existing build...${NC}"
+    rm -rf ../build
+fi
+
 # Build the frontend
 echo -e "${YELLOW}⚛️  Building React frontend...${NC}"
 npm run build
@@ -34,8 +40,13 @@ npm run build
 # Check if build was successful
 if [ ! -f "../build/index.html" ]; then
     echo -e "${RED}❌ Build failed - index.html not found${NC}"
+    echo -e "${YELLOW}💡 Check the build output above for errors${NC}"
     exit 1
 fi
+
+# List build contents for debugging
+echo -e "${YELLOW}📁 Build contents:${NC}"
+ls -la ../build/
 
 echo -e "${GREEN}✅ Frontend build complete${NC}"
 

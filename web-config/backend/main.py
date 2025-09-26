@@ -12,7 +12,7 @@ import json
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 import uvicorn
 
 from config_generator import ConfigGenerator
@@ -27,7 +27,8 @@ class NetworkConfig(BaseModel):
     homelab_pool: str = "10.43.0.0/20"
     user_pool: str = "10.43.16.0/20"
 
-    @validator('pod_cidr', 'service_cidr', 'homelab_pool', 'user_pool')
+    @field_validator('pod_cidr', 'service_cidr', 'homelab_pool', 'user_pool')
+    @classmethod
     def validate_cidr(cls, v):
         # Basic CIDR validation
         if not v or '/' not in v:
@@ -50,7 +51,8 @@ class HomeLabConfig(BaseModel):
     network: NetworkConfig
     storage: StorageConfig
 
-    @validator('admin_password')
+    @field_validator('admin_password')
+    @classmethod
     def validate_password(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
@@ -179,7 +181,7 @@ async def websocket_deployment_logs(websocket: WebSocket):
 
 # Mount static files first (for JS, CSS, etc.)
 build_dir = Path(__file__).parent.parent / "build"
-if build_dir.exists():
+if build_dir.exists() and (build_dir / "assets").exists():
     app.mount("/assets", StaticFiles(directory=build_dir / "assets"), name="assets")
 
 # Serve static files (built React app)
