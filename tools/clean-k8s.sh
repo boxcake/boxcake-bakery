@@ -89,6 +89,24 @@ show_cleanup_plan() {
     kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment registry-ui -n "$NAMESPACE" 2>/dev/null && echo "  - Deployment: registry-ui" || true
     kubectl --kubeconfig="$KUBECONFIG_PATH" get service registry-ui-service -n "$NAMESPACE" 2>/dev/null && echo "  - Service: registry-ui-service" || true
 
+    # ConfigMaps
+    echo ""
+    echo "⚙️  CONFIGMAPS & SECRETS:"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get configmap -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - ConfigMap: "$1}' || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get secret -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - Secret: "$1}' || true
+
+    # Jobs
+    echo ""
+    echo "🔧 JOBS & CRONJOBS:"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get jobs -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - Job: "$1}' || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get cronjobs -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - CronJob: "$1}' || true
+
+    # Other Terraform-managed resources
+    echo ""
+    echo "📋 OTHER RESOURCES:"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get ingress -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - Ingress: "$1}' || true
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get networkpolicy -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print "  - NetworkPolicy: "$1}' || true
+
     # Check for persistent volumes
     echo ""
     echo "💾 PERSISTENT STORAGE:"
@@ -210,6 +228,81 @@ cleanup_registry_ui() {
     fi
 }
 
+# Clean up ConfigMaps, Secrets, and other resources
+cleanup_additional_resources() {
+    log_info "Cleaning up ConfigMaps, Secrets, and other resources..."
+
+    # Remove ConfigMaps related to portainer/registry
+    local configmaps
+    configmaps=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get configmap -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print $1}' || echo "")
+
+    if [[ -n "$configmaps" ]]; then
+        for cm in $configmaps; do
+            log_info "Deleting ConfigMap: $cm"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete configmap "$cm" -n "$NAMESPACE" --ignore-not-found=true
+            log_success "ConfigMap $cm deleted"
+        done
+    else
+        log_success "No ConfigMaps to clean up"
+    fi
+
+    # Remove Secrets related to portainer/registry
+    local secrets
+    secrets=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get secret -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print $1}' || echo "")
+
+    if [[ -n "$secrets" ]]; then
+        for secret in $secrets; do
+            log_info "Deleting Secret: $secret"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete secret "$secret" -n "$NAMESPACE" --ignore-not-found=true
+            log_success "Secret $secret deleted"
+        done
+    else
+        log_success "No Secrets to clean up"
+    fi
+
+    # Remove Jobs related to portainer/registry
+    local jobs
+    jobs=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get jobs -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print $1}' || echo "")
+
+    if [[ -n "$jobs" ]]; then
+        for job in $jobs; do
+            log_info "Deleting Job: $job"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete job "$job" -n "$NAMESPACE" --ignore-not-found=true
+            log_success "Job $job deleted"
+        done
+    else
+        log_success "No Jobs to clean up"
+    fi
+
+    # Remove CronJobs related to portainer/registry
+    local cronjobs
+    cronjobs=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get cronjobs -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print $1}' || echo "")
+
+    if [[ -n "$cronjobs" ]]; then
+        for cronjob in $cronjobs; do
+            log_info "Deleting CronJob: $cronjob"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete cronjob "$cronjob" -n "$NAMESPACE" --ignore-not-found=true
+            log_success "CronJob $cronjob deleted"
+        done
+    else
+        log_success "No CronJobs to clean up"
+    fi
+
+    # Remove Ingresses related to portainer/registry
+    local ingresses
+    ingresses=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get ingress -n "$NAMESPACE" --no-headers 2>/dev/null | grep -E "(portainer|registry)" | awk '{print $1}' || echo "")
+
+    if [[ -n "$ingresses" ]]; then
+        for ingress in $ingresses; do
+            log_info "Deleting Ingress: $ingress"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete ingress "$ingress" -n "$NAMESPACE" --ignore-not-found=true
+            log_success "Ingress $ingress deleted"
+        done
+    else
+        log_success "No Ingresses to clean up"
+    fi
+}
+
 # Clean up any orphaned persistent volumes
 cleanup_orphaned_volumes() {
     log_info "Checking for orphaned persistent volumes..."
@@ -225,6 +318,55 @@ cleanup_orphaned_volumes() {
         done
     else
         log_success "No orphaned persistent volumes found"
+    fi
+}
+
+# Clean up Terraform state and related files
+cleanup_terraform_state() {
+    log_info "Cleaning up Terraform/OpenTofu state..."
+
+    local terraform_dir="/opt/homelab/terraform"
+    if [[ -d "$terraform_dir" ]]; then
+        log_info "Found Terraform directory at $terraform_dir"
+
+        # Remove state files
+        if [[ -f "$terraform_dir/terraform.tfstate" ]]; then
+            log_warning "Removing Terraform state file (this will lose track of infrastructure)"
+            rm -f "$terraform_dir/terraform.tfstate" "$terraform_dir/terraform.tfstate.backup"
+            log_success "Terraform state files deleted"
+        fi
+
+        # Remove plan files
+        if [[ -f "$terraform_dir/tfplan" ]]; then
+            log_info "Removing Terraform plan files"
+            rm -f "$terraform_dir/tfplan"
+            log_success "Terraform plan files deleted"
+        fi
+
+        # Remove .terraform directory
+        if [[ -d "$terraform_dir/.terraform" ]]; then
+            log_info "Removing Terraform working directory"
+            rm -rf "$terraform_dir/.terraform"
+            log_success "Terraform working directory deleted"
+        fi
+
+        # Remove lock file
+        if [[ -f "$terraform_dir/.terraform.lock.hcl" ]]; then
+            log_info "Removing Terraform lock file"
+            rm -f "$terraform_dir/.terraform.lock.hcl"
+            log_success "Terraform lock file deleted"
+        fi
+    else
+        log_success "No Terraform directory found at $terraform_dir"
+    fi
+
+    # Also clean up any terraform files in current directory
+    if [[ -f "./terraform.tfstate" ]]; then
+        log_info "Removing local Terraform state files"
+        rm -f ./terraform.tfstate ./terraform.tfstate.backup ./tfplan
+        rm -rf ./.terraform
+        rm -f ./.terraform.lock.hcl
+        log_success "Local Terraform files deleted"
     fi
 }
 
@@ -345,6 +487,10 @@ main() {
     cleanup_registry
     echo ""
     cleanup_registry_ui
+    echo ""
+    cleanup_additional_resources
+    echo ""
+    cleanup_terraform_state
     echo ""
     cleanup_orphaned_volumes
     echo ""
