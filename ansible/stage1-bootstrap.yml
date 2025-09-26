@@ -11,6 +11,7 @@
     homelab_group: "homelab"
     homelab_home: "/opt/homelab"
     web_config_port: 8080
+    ansible_python_interpreter: /opt/homelab/venv/bin/python
 
   tasks:
     - name: Update package cache
