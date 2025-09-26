@@ -59,17 +59,17 @@
     echo "Starting OpenTofu apply at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
     # Run tofu apply with detailed logging
-    tofu apply -auto-approve -detailed-exitcode 2>&1 | tee -a {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    tofu apply -auto-approve 2>&1 | tee -a {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
     # Capture exit code
     TOFU_EXIT_CODE=${PIPESTATUS[0]}
     echo "OpenTofu apply completed with exit code: $TOFU_EXIT_CODE at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
     # If failed, also log error details
-    if [ $TOFU_EXIT_CODE -ne 0 ] && [ $TOFU_EXIT_CODE -ne 2 ]; then
+    if [ $TOFU_EXIT_CODE -ne 0 ]; then
       echo "ERROR: OpenTofu apply failed with exit code $TOFU_EXIT_CODE" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-      echo "Full error output:" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-      tofu show -json >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-state.json 2>/dev/null || true
+      echo "Attempting to capture state information..." >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+      tofu show -json >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-state.json 2>/dev/null || echo "Could not capture state" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
     fi
 
     exit $TOFU_EXIT_CODE
@@ -78,7 +78,7 @@
     executable: /bin/bash
   register: tofu_apply_result
   when: not (terraform_plan_only | default(false))
-  failed_when: tofu_apply_result.rc != 0 and tofu_apply_result.rc != 2
+  failed_when: tofu_apply_result.rc != 0
 
 - name: Display OpenTofu apply summary
   debug:
@@ -88,9 +88,7 @@
       Log file: {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
       {% if tofu_apply_result.rc == 0 %}
-      ✅ No changes were needed
-      {% elif tofu_apply_result.rc == 2 %}
-      ✅ Changes applied successfully
+      ✅ Apply completed successfully
       {% else %}
       ❌ Apply failed - check log file for details
       {% endif %}
