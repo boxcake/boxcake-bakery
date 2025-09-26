@@ -13,12 +13,11 @@ ExecStart={{ homelab_home }}/web-config/backend/venv/bin/python main.py
 Restart=always
 RestartSec=5
 
-# Security settings
-NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths={{ homelab_home }}
-ProtectHome=true
-PrivateTmp=true
+# Security settings (relaxed to allow sudo)
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+PrivateTmp=false
 
 [Install]
 WantedBy=multi-user.target
