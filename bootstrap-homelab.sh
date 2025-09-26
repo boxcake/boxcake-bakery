@@ -72,8 +72,6 @@ echo "Cleaning up working directories..."
 
 rm -rf ${INSTALL_DIR}
 mkdir -p ${INSTALL_DIR}
-chown homelab:homelab ${INSTALL_DIR}
-chmod g+s ${INSTALL_DIR}
 
 cd ${INSTALL_DIR}
 
@@ -94,24 +92,21 @@ source "$VENV_PATH/bin/activate"
 pip install --upgrade pip
 pip install ansible
 
-exit
 
 # Set proper ownership and permissions for homelab user
 echo "🔐 Setting permissions for homelab user..."
-chown -R homelab:homelab /opt/homelab
-chmod -R 755 /opt/homelab
+chown -R homelab:homelab ${INSTALL_DIR}
+chmod -R 755 ${INSTALL_DIR}
+chmod g+s ${INSTALL_DIR}
 
 # Add venv to PATH for this script
 export PATH="$VENV_PATH/bin:$PATH"
 
 # Change to ansible directory
-cd "${SCRIPT_DIR}/ansible"
+cd "${INSTALL_DIR}/ansible"
 
 echo "🔧 Running Stage 1: Web Configuration Setup..."
 echo "This will:"
-echo "  • Install system dependencies"
-echo "  • Create homelab user with sudo privileges"
-echo "  • Copy project files to /opt/homelab"
 echo "  • Build and start web configuration interface"
 echo ""
 
@@ -132,7 +127,7 @@ if ansible-playbook -i inventory/hosts.yml websetup.yml; then
     echo "   2. Configure your homelab settings (network, services, passwords)"
     echo "   3. Click 'Deploy Now' to start Stage 2 (full deployment)"
     echo ""
-    echo "📁 All project files are now located in: /opt/homelab"
+    echo "📁 All project files are now located in: ${INSTALL_DIR}"
     echo "🔐 The 'homelab' user has been created with full sudo privileges"
     echo ""
     echo "🎉 Ready for configuration!"
@@ -140,6 +135,5 @@ else
     echo ""
     echo "❌ Stage 1 failed!"
     echo "Check the output above for errors."
-    echo "You may need to run: sudo ./bootstrap-homelab.sh"
     exit 1
 fi
