@@ -11,31 +11,7 @@
     state: present
   become: yes
 
-- name: Create homelab user
-  user:
-    name: "{{ homelab_user }}"
-    home: "{{ homelab_home }}"
-    shell: /bin/bash
-    create_home: yes
-    system: no
-  become: yes
-
-- name: Add homelab user to sudo group
-  user:
-    name: "{{ homelab_user }}"
-    groups: sudo
-    append: yes
-  become: yes
-
-- name: Create sudoers file for homelab user
-  copy:
-    content: |
-      # Allow homelab user to run all commands without password
-      {{ homelab_user }} ALL=(ALL) NOPASSWD: ALL
-    dest: "/etc/sudoers.d/{{ homelab_user }}"
-    mode: '0440'
-    validate: 'visudo -cf %s'
-  become: yes
+# Homelab user is now created by bootstrap-homelab.sh script
 
 - name: Ensure /opt/homelab directory exists
   file:

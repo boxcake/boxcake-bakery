@@ -21,6 +21,23 @@ echo "📦 Installing system dependencies..."
 apt-get update
 apt-get install -y python3 python3-venv python3-pip
 
+# Create homelab user and group
+echo "👤 Creating homelab user..."
+if ! id "homelab" &>/dev/null; then
+    useradd -m -s /bin/bash -d /home/homelab homelab
+    usermod -aG sudo homelab
+
+    # Create sudoers file for homelab user
+    cat > /etc/sudoers.d/homelab << 'EOF'
+# Allow homelab user to run all commands without password
+homelab ALL=(ALL) NOPASSWD: ALL
+EOF
+    chmod 440 /etc/sudoers.d/homelab
+
+    # Validate sudoers file
+    visudo -cf /etc/sudoers.d/homelab
+fi
+
 # Create homelab directory structure
 echo "📁 Creating /opt/homelab directory..."
 mkdir -p /opt/homelab
@@ -37,6 +54,11 @@ echo "📦 Installing Ansible in virtual environment..."
 source "$VENV_PATH/bin/activate"
 pip install --upgrade pip
 pip install ansible
+
+# Set proper ownership and permissions for homelab user
+echo "🔐 Setting permissions for homelab user..."
+chown -R homelab:homelab /opt/homelab
+chmod -R 755 /opt/homelab
 
 # Add venv to PATH for this script
 export PATH="$VENV_PATH/bin:$PATH"
