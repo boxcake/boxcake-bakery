@@ -19,25 +19,12 @@
 
   roles:
     - k3s
-    - longhorn
-    - metallb
-    - role: portainer
-      when: deployment.services.portainer | default(false)
-    - role: registry
-      when: deployment.services.registry | default(false)
-    - role: registry-ui
-      when: deployment.services.registry_ui | default(false)
+    - storage
+    - load-balancer
+    - kubelish
+    - opentofu
 
   post_tasks:
-    - name: Apply additional Terraform resources if needed
-      shell: |
-        cd {{ homelab_home }}/terraform
-        if [ -f user.tfvars ]; then
-          tofu init
-          tofu apply -auto-approve -var-file=user.tfvars
-        fi
-      become_user: "{{ homelab_user }}"
-      when: deployment.services.additional_terraform | default(false)
 
     - name: Final deployment summary
       debug:
