@@ -20,6 +20,9 @@ fi
 echo "📦 Installing system dependencies..."
 apt-get update
 apt-get install -y \
+  curl \
+  git \
+  rsync \
   python3 \
   python3-venv \
   python3-pip \
