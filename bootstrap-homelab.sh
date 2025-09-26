@@ -52,7 +52,6 @@ apt-get install -y \
 # Create homelab user and group
 echo "👤 Creating homelab user..."
 if ! id "homelab" &>/dev/null; then
-    userdel homelab
     useradd -m -s /bin/bash -d /home/homelab homelab
     usermod -aG sudo homelab
 
