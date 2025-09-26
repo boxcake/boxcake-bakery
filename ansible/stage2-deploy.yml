@@ -32,6 +32,19 @@
       include_vars: "{{ homelab_home }}/configs/network-defaults.yaml"
       when: network_config_stat.stat.exists
 
+    - name: Debug loaded configuration variables
+      debug:
+        msg: |
+          Configuration Debug:
+          - User config loaded: {{ user_config_stat.stat.exists }}
+          - Network config loaded: {{ network_config_stat.stat.exists }}
+          - Deployment variable exists: {{ deployment is defined }}
+          {% if deployment is defined %}
+          - Services configured: {{ deployment.services | default('not set') }}
+          - Portainer enabled: {{ deployment.services.portainer | default('not set') }}
+          - Admin password set: {{ 'YES' if deployment.admin_password is defined else 'NO' }}
+          {% endif %}
+
   roles:
     - system-prep
     - docker
@@ -42,6 +55,16 @@
     - opentofu
 
   post_tasks:
+    - name: Check if Portainer service exists
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Service
+        name: portainer-service
+        namespace: default
+        kubeconfig: "{{ kubeconfig_path }}"
+      register: portainer_service_check
+      failed_when: false
+
     - name: Wait for Portainer service to exist
       kubernetes.core.k8s_info:
         api_version: v1
@@ -53,7 +76,7 @@
         kubeconfig: "{{ kubeconfig_path }}"
       register: portainer_service_wait
       failed_when: false
-      when: deployment.services.portainer | default(false)
+      when: portainer_service_check.resources | length > 0
 
     - name: Wait for Portainer deployment to be available
       kubernetes.core.k8s_info:
@@ -67,7 +90,7 @@
           status: "True"
         wait_timeout: 300
         kubeconfig: "{{ kubeconfig_path }}"
-      when: deployment.services.portainer | default(false)
+      when: portainer_service_check.resources | length > 0
 
     - name: Get Portainer service info for configuration
       kubernetes.core.k8s_info:
@@ -77,7 +100,7 @@
         namespace: default
         kubeconfig: "{{ kubeconfig_path }}"
       register: portainer_service_info
-      when: deployment.services.portainer | default(false)
+      when: portainer_service_check.resources | length > 0
 
     - name: Configure Portainer via API
       shell: |
@@ -195,7 +218,7 @@
         echo "   🌐 Access: ${PORTAINER_URL}"
       args:
         executable: /bin/bash
-      when: deployment.services.portainer | default(false)
+      when: portainer_service_check.resources | length > 0
 
     - name: Final deployment summary
       debug:
