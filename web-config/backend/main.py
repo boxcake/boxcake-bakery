@@ -93,12 +93,12 @@ async def health_check():
 @app.get("/api/config/defaults")
 async def get_default_config():
     """Get default configuration values"""
-    return HomeLabConfig(
-        admin_password="",
-        services=ServicesConfig(),
-        network=NetworkConfig(),
-        storage=StorageConfig()
-    ).dict()
+    return {
+        "admin_password": "",
+        "services": ServicesConfig().dict(),
+        "network": NetworkConfig().dict(),
+        "storage": StorageConfig().dict()
+    }
 
 @app.post("/api/config/validate")
 async def validate_config(config: HomeLabConfig):
