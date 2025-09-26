@@ -174,7 +174,7 @@ resource "kubernetes_service" "portainer_service" {
     type = "LoadBalancer"
 
     port {
-      name        = "http"
+      name        = "portainer"
       port        = 80
       target_port = 9000
     }
