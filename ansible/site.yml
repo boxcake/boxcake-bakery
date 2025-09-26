@@ -1,9 +1,10 @@
 ---
-# Main Ansible playbook for Home Lab Pi setup
+# Main Ansible playbook for Home Lab Pi setup (Stage 2)
 - name: "Home Lab Pi Complete Setup"
-  hosts: homelab
+  hosts: localhost
   become: yes
   gather_facts: yes
+  connection: local
   
   vars_files:
     - vars/main.yml
@@ -20,9 +21,11 @@
   roles:
     - role: system-prep
       tags: [system, prep]
-      
+      when: not (ansible_run_tags is defined and 'bootstrap' in ansible_skip_tags | default([]))
+
     - role: homelab-user
       tags: [user, security]
+      when: not (ansible_run_tags is defined and 'bootstrap' in ansible_skip_tags | default([]))
       
     - role: docker
       tags: [docker, container]
@@ -201,28 +204,27 @@
     - name: Display completion message
       debug:
         msg: |
-          🎉 Home Lab Pi setup completed successfully!
-          
-          ✅ COMPLETE DEPLOYMENT - Core infrastructure running:
+          🎉 Stage 2 Home Lab deployment completed successfully!
+
+          ✅ COMPLETE INFRASTRUCTURE:
           - K3s Kubernetes cluster
           - Longhorn distributed storage
-          - MetalLB load balancer with IP pools
-          - Kubelish mDNS announcer (all nodes)
-          - OpenTofu (Infrastructure as Code)
+          - MetalLB load balancer with configured IP pools
+          - Kubelish mDNS service discovery
+          - All selected services deployed and configured
 
-          🚧 Next Steps - Deploy with OpenTofu:
-          - Docker Registry (container with persistent storage)
-          - Portainer (container management)
-          - Registry UI (web interface)
-          - All services with proper state management
-          
-          🚀 OpenTofu deployment completed automatically!
-          ✅ All services deployed and configured
-          ✅ Portainer configured with admin access
-          3. Manage everything: sudo -u {{ homelab_user }} -i
-          
-          📊 LoadBalancer Status:
+          🎯 DEPLOYED SERVICES:
+          - Portainer: Container management interface
+          - Docker Registry: Private container registry
+          - Registry UI: Web interface for registry browsing
+          - All services accessible via LoadBalancer IPs
+
+          📊 MANAGEMENT ACCESS:
           Run: kubectl get svc -A | grep LoadBalancer
-          
-          🎊 Migration Complete: Pure Ansible deployment!
+          Switch to management user: sudo -u {{ homelab_user }} -i
+
+          🌐 ACCESS URLs:
+          Check your web interface completion page for service URLs
+
+          🎊 Two-Stage Deployment Complete!
       tags: always

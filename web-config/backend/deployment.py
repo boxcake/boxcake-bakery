@@ -58,17 +58,16 @@ class DeploymentManager:
         }
 
     async def _run_deployment(self, deployment_id: str):
-        """Run the actual deployment process"""
+        """Run the actual deployment process (Stage 2)"""
         deployment = self.deployments[deployment_id]
 
         try:
             await self._update_status(deployment_id, 'running')
 
-            # Define deployment steps
+            # Define Stage 2 deployment steps
             steps = [
-                {'name': 'Install Ansible collections', 'function': self._install_ansible_collections},
-                {'name': 'Run Ansible playbook', 'function': self._run_ansible_playbook},
-                {'name': 'Apply Terraform/OpenTofu', 'function': self._run_terraform},
+                {'name': 'Prepare Stage 2 environment', 'function': self._prepare_stage2},
+                {'name': 'Run Stage 2 Ansible playbook', 'function': self._run_stage2_ansible},
                 {'name': 'Verify deployment', 'function': self._verify_deployment}
             ]
 
@@ -98,19 +97,86 @@ class DeploymentManager:
             deployment['finished_at'] = datetime.now().isoformat()
             await self._add_log(deployment_id, f"❌ Deployment failed: {str(e)}")
 
+    async def _prepare_stage2(self, deployment_id: str):
+        """Prepare Stage 2 environment"""
+        await self._add_log(deployment_id, "Preparing Stage 2 deployment environment...")
+
+        # Check if we're running as the homelab user
+        current_user = os.getenv('USER', 'unknown')
+        await self._add_log(deployment_id, f"Running as user: {current_user}")
+
+        # Verify we can find ansible-playbook
+        ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+        if not ansible_playbook_cmd:
+            raise Exception("ansible-playbook not found. Stage 1 bootstrap may not have completed properly.")
+
+        await self._add_log(deployment_id, f"✅ Found ansible-playbook at: {ansible_playbook_cmd}")
+
+    async def _find_command(self, commands: list, deployment_id: str) -> str:
+        """Find a command in the system"""
+        search_paths = [
+            "/usr/local/bin/",
+            "/usr/bin/",
+            "/home/homelab/.local/bin/",
+            ""  # PATH
+        ]
+
+        for cmd in commands:
+            for path in search_paths:
+                full_cmd = path + cmd if path else cmd
+                try:
+                    result = subprocess.run([full_cmd, "--version" if cmd != "tofu" else "version"],
+                                          capture_output=True, timeout=10)
+                    if result.returncode == 0:
+                        return full_cmd
+                except (subprocess.TimeoutExpired, FileNotFoundError):
+                    continue
+        return None
+
     async def _install_ansible_collections(self, deployment_id: str):
         """Install required Ansible collections"""
         await self._add_log(deployment_id, "Installing Ansible collections...")
 
+        # Try to find ansible-galaxy in common locations
+        ansible_galaxy_paths = [
+            "/usr/local/bin/ansible-galaxy",
+            "/usr/bin/ansible-galaxy",
+            "/home/homelab/.local/bin/ansible-galaxy",
+            "ansible-galaxy"  # fallback to PATH
+        ]
+
+        ansible_galaxy_cmd = None
+        for path in ansible_galaxy_paths:
+            try:
+                result = subprocess.run([path, "--version"],
+                                      capture_output=True,
+                                      timeout=10)
+                if result.returncode == 0:
+                    ansible_galaxy_cmd = path
+                    await self._add_log(deployment_id, f"Found ansible-galaxy at: {path}")
+                    break
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                continue
+
+        if not ansible_galaxy_cmd:
+            await self._add_log(deployment_id, "ansible-galaxy not found, installing Ansible...")
+            # Install Ansible first
+            install_cmd = ["python3", "-m", "pip", "install", "--break-system-packages", "ansible"]
+            result = await self._run_command(install_cmd, deployment_id)
+            if result.returncode != 0:
+                raise Exception("Failed to install Ansible")
+
+            ansible_galaxy_cmd = "ansible-galaxy"
+
         requirements_file = self.ansible_dir / "requirements.yml"
         if requirements_file.exists():
             cmd = [
-                "ansible-galaxy", "collection", "install",
+                ansible_galaxy_cmd, "collection", "install",
                 "-r", str(requirements_file), "--force"
             ]
         else:
             cmd = [
-                "ansible-galaxy", "collection", "install",
+                ansible_galaxy_cmd, "collection", "install",
                 "kubernetes.core", "community.general", "--force"
             ]
 
@@ -118,9 +184,63 @@ class DeploymentManager:
         if result.returncode != 0:
             raise Exception("Failed to install Ansible collections")
 
+    async def _run_stage2_ansible(self, deployment_id: str):
+        """Run Stage 2 Ansible playbook (full deployment)"""
+        await self._add_log(deployment_id, "Starting Stage 2 full deployment...")
+
+        # Find ansible-playbook command
+        ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+        if not ansible_playbook_cmd:
+            raise Exception("ansible-playbook command not found")
+
+        # Change to ansible directory
+        original_cwd = os.getcwd()
+        os.chdir(self.ansible_dir)
+
+        try:
+            # Run the main site.yml playbook with sudo
+            cmd = [
+                "sudo", ansible_playbook_cmd,
+                "-i", "inventory/hosts.yml",
+                "site.yml",
+                "--skip-tags", "bootstrap"  # Skip bootstrap since we're already past that
+            ]
+
+            await self._add_log(deployment_id, f"Running: {' '.join(cmd)}")
+            result = await self._run_command(cmd, deployment_id, stream_logs=True)
+            if result.returncode != 0:
+                raise Exception("Stage 2 Ansible playbook execution failed")
+
+        finally:
+            os.chdir(original_cwd)
+
     async def _run_ansible_playbook(self, deployment_id: str):
         """Run the main Ansible playbook"""
         await self._add_log(deployment_id, "Starting Ansible playbook execution...")
+
+        # Try to find ansible-playbook in common locations
+        ansible_playbook_paths = [
+            "/usr/local/bin/ansible-playbook",
+            "/usr/bin/ansible-playbook",
+            "/home/homelab/.local/bin/ansible-playbook",
+            "ansible-playbook"  # fallback to PATH
+        ]
+
+        ansible_playbook_cmd = None
+        for path in ansible_playbook_paths:
+            try:
+                result = subprocess.run([path, "--version"],
+                                      capture_output=True,
+                                      timeout=10)
+                if result.returncode == 0:
+                    ansible_playbook_cmd = path
+                    await self._add_log(deployment_id, f"Found ansible-playbook at: {path}")
+                    break
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                continue
+
+        if not ansible_playbook_cmd:
+            raise Exception("ansible-playbook command not found")
 
         # Change to ansible directory
         original_cwd = os.getcwd()
@@ -128,7 +248,7 @@ class DeploymentManager:
 
         try:
             cmd = [
-                "ansible-playbook",
+                ansible_playbook_cmd,
                 "-i", "inventory/hosts.yml",
                 "site.yml"
             ]
@@ -144,13 +264,39 @@ class DeploymentManager:
         """Run OpenTofu/Terraform deployment"""
         await self._add_log(deployment_id, "Applying OpenTofu configuration...")
 
+        # Try to find tofu/terraform in common locations
+        tofu_paths = [
+            "/usr/local/bin/tofu",
+            "/usr/bin/tofu",
+            "/usr/local/bin/terraform",
+            "/usr/bin/terraform",
+            "tofu",  # fallback to PATH
+            "terraform"  # fallback to PATH
+        ]
+
+        tofu_cmd = None
+        for path in tofu_paths:
+            try:
+                result = subprocess.run([path, "version"],
+                                      capture_output=True,
+                                      timeout=10)
+                if result.returncode == 0:
+                    tofu_cmd = path
+                    await self._add_log(deployment_id, f"Found Terraform/OpenTofu at: {path}")
+                    break
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                continue
+
+        if not tofu_cmd:
+            raise Exception("OpenTofu/Terraform command not found")
+
         # Change to terraform directory
         original_cwd = os.getcwd()
         os.chdir(self.terraform_dir)
 
         try:
             # Initialize if needed
-            init_cmd = ["tofu", "init"]
+            init_cmd = [tofu_cmd, "init"]
             result = await self._run_command(init_cmd, deployment_id)
             if result.returncode != 0:
                 raise Exception("OpenTofu init failed")
@@ -158,9 +304,9 @@ class DeploymentManager:
             # Apply configuration
             user_tfvars = Path("user.tfvars")
             if user_tfvars.exists():
-                apply_cmd = ["tofu", "apply", "-auto-approve", "-var-file=user.tfvars"]
+                apply_cmd = [tofu_cmd, "apply", "-auto-approve", "-var-file=user.tfvars"]
             else:
-                apply_cmd = ["tofu", "apply", "-auto-approve"]
+                apply_cmd = [tofu_cmd, "apply", "-auto-approve"]
 
             result = await self._run_command(apply_cmd, deployment_id, stream_logs=True)
             if result.returncode != 0:

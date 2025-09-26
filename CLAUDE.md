@@ -31,13 +31,17 @@ This is a complete home lab automation system that uses Ansible + OpenTofu/Terra
 
 ## Common Commands
 
-### Web-Based Setup (Recommended)
+### Staged Web-Based Setup (Recommended)
 ```bash
-sudo bash ./setup-with-web-config.sh
-```
-Launches an interactive web interface at `http://your-ip:8080` for user-friendly configuration.
+# Stage 1: Bootstrap system and web interface
+sudo bash ./bootstrap-homelab.sh
 
-### Direct Deployment (Advanced)
+# Stage 2: Automatic via web interface after configuration
+# Visit http://your-ip:8080 and click "Deploy Now"
+```
+Two-stage deployment with web-based configuration interface.
+
+### Legacy Direct Deployment (Advanced)
 ```bash
 sudo bash ./setup-via-ansible.sh
 ```

@@ -1,0 +1,186 @@
+---
+# Stage 1: Bootstrap system and web configuration service
+- name: "Bootstrap Home Lab System"
+  hosts: localhost
+  become: yes
+  gather_facts: yes
+  connection: local
+
+  vars:
+    homelab_user: "homelab"
+    homelab_group: "homelab"
+    homelab_home: "/home/{{ homelab_user }}"
+    web_config_port: 8080
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install essential packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - curl
+          - git
+          - sudo
+        state: present
+
+    - name: Install Node.js repository
+      shell: |
+        curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+      args:
+        creates: /etc/apt/sources.list.d/nodesource.list
+
+    - name: Install Node.js
+      apt:
+        name: nodejs
+        state: present
+        update_cache: yes
+
+    - name: Create homelab group
+      group:
+        name: "{{ homelab_group }}"
+        state: present
+
+    - name: Create homelab user
+      user:
+        name: "{{ homelab_user }}"
+        group: "{{ homelab_group }}"
+        home: "{{ homelab_home }}"
+        shell: /bin/bash
+        create_home: yes
+        state: present
+
+    - name: Add homelab user to sudo group
+      user:
+        name: "{{ homelab_user }}"
+        groups: sudo
+        append: yes
+
+    - name: Create sudoers file for homelab group
+      copy:
+        content: |
+          # Homelab infrastructure management permissions
+          %{{ homelab_group }} ALL=(ALL) NOPASSWD: /bin/systemctl *, /usr/bin/kubectl *, /usr/local/bin/k3s *, /sbin/iptables *, /bin/mount *, /bin/umount *, /usr/bin/docker *, /snap/bin/*, /usr/local/bin/*, /usr/bin/snap *
+          %{{ homelab_group }} ALL=(root) NOPASSWD: /usr/bin/ansible-playbook *
+        dest: /etc/sudoers.d/homelab
+        mode: '0440'
+        validate: 'visudo -cf %s'
+
+    - name: Install Ansible for homelab user
+      pip:
+        name: ansible
+        state: present
+        break_system_packages: yes
+        executable: pip3
+
+    - name: Install Ansible collections
+      command: ansible-galaxy collection install kubernetes.core community.general
+      become_user: "{{ homelab_user }}"
+      become: yes
+
+    - name: Copy project files to homelab user directory
+      synchronize:
+        src: "{{ playbook_dir }}/../"
+        dest: "{{ homelab_home }}/homelab-project/"
+        delete: yes
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=**/__pycache__"
+          - "--exclude=**/node_modules"
+          - "--exclude=**/venv"
+          - "--exclude=**/build"
+      become_user: "{{ homelab_user }}"
+      become: yes
+
+    - name: Set ownership of project directory
+      file:
+        path: "{{ homelab_home }}/homelab-project"
+        owner: "{{ homelab_user }}"
+        group: "{{ homelab_group }}"
+        recurse: yes
+
+    - name: Create Python virtual environment for web service
+      command: python3 -m venv "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+      become_user: "{{ homelab_user }}"
+      become: yes
+      args:
+        creates: "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+
+    - name: Install Python dependencies
+      pip:
+        requirements: "{{ homelab_home }}/homelab-project/web-config/backend/requirements.txt"
+        virtualenv: "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+      become_user: "{{ homelab_user }}"
+      become: yes
+
+    - name: Install npm dependencies
+      npm:
+        path: "{{ homelab_home }}/homelab-project/web-config/frontend"
+        state: present
+      become_user: "{{ homelab_user }}"
+      become: yes
+
+    - name: Build React frontend
+      command: npm run build
+      args:
+        chdir: "{{ homelab_home }}/homelab-project/web-config/frontend"
+      become_user: "{{ homelab_user }}"
+      become: yes
+
+    - name: Create systemd service for web configuration
+      template:
+        src: homelab-web-config.service.j2
+        dest: /etc/systemd/system/homelab-web-config.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart web service
+
+    - name: Enable and start web configuration service
+      systemd:
+        name: homelab-web-config
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+    - name: Wait for web service to be ready
+      uri:
+        url: "http://localhost:{{ web_config_port }}/api/health"
+        method: GET
+      register: web_health_check
+      until: web_health_check.status == 200
+      retries: 30
+      delay: 2
+
+    - name: Display setup completion message
+      debug:
+        msg: |
+          🎉 Stage 1 Bootstrap Complete!
+
+          ✅ System prepared with essential packages
+          ✅ Homelab user created with sudo permissions
+          ✅ Ansible installed and configured
+          ✅ Web configuration service running
+
+          🌐 Next Steps:
+          1. Access the configuration interface: http://{{ ansible_default_ipv4.address }}:{{ web_config_port }}
+          2. Complete the configuration wizard
+          3. Click "Deploy Now" to start Stage 2 deployment
+
+          👤 Management user: {{ homelab_user }}
+          🏠 Project location: {{ homelab_home }}/homelab-project/
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart web service
+      systemd:
+        name: homelab-web-config
+        state: restarted

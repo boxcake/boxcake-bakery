@@ -116,7 +116,8 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=${WEB_CONFIG_DIR}/backend
-Environment=PATH=${WEB_CONFIG_DIR}/backend/venv/bin
+Environment=PATH=${WEB_CONFIG_DIR}/backend/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONPATH=${WEB_CONFIG_DIR}/backend
 ExecStart=${WEB_CONFIG_DIR}/backend/venv/bin/python main.py
 Restart=always
 RestartSec=5
