@@ -11,7 +11,7 @@ import yaml
 import json
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, validator
 import uvicorn
 
@@ -177,6 +177,11 @@ async def websocket_deployment_logs(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+# Mount static files first (for JS, CSS, etc.)
+build_dir = Path(__file__).parent.parent / "build"
+if build_dir.exists():
+    app.mount("/assets", StaticFiles(directory=build_dir / "assets"), name="assets")
+
 # Serve static files (built React app)
 @app.get("/")
 async def serve_frontend():
@@ -196,10 +201,24 @@ async def serve_frontend():
         </html>
         """)
 
-# Mount static files
-build_dir = Path(__file__).parent.parent / "build"
-if build_dir.exists():
-    app.mount("/static", StaticFiles(directory=build_dir), name="static")
+# Catch-all route for client-side routing and static files
+@app.get("/{file_path:path}")
+async def serve_static_files(file_path: str):
+    """Serve static files or fall back to index.html for client-side routing"""
+    build_dir = Path(__file__).parent.parent / "build"
+    file_full_path = build_dir / file_path
+
+    # If it's a file that exists, serve it
+    if file_full_path.is_file():
+        return FileResponse(file_full_path)
+
+    # For client-side routing, serve index.html
+    index_path = build_dir / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
+
+    # If nothing found, return 404
+    raise HTTPException(status_code=404, detail="File not found")
 
 if __name__ == "__main__":
     uvicorn.run(
