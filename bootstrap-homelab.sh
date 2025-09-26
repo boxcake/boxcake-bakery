@@ -40,9 +40,18 @@ if [ "$REAL_USER" = "root" ]; then
     REAL_USER="homelab"
 fi
 
+# Copy project to /opt/homelab first (as root)
+echo -e "${YELLOW}📁 Setting up project directory...${NC}"
+mkdir -p /opt/homelab
+cp -r "${SCRIPT_DIR}"/* /opt/homelab/ 2>/dev/null || true
+cp -r "${SCRIPT_DIR}"/.[^.]* /opt/homelab/ 2>/dev/null || true
+
+# Remove unnecessary directories
+rm -rf /opt/homelab/.git /opt/homelab/web-config/frontend/node_modules /opt/homelab/web-config/backend/venv /opt/homelab/web-config/build 2>/dev/null || true
+
 echo -e "${GREEN}🚀 Starting Home Lab Bootstrap (Stage 1)...${NC}"
 echo -e "${YELLOW}📋 Configuration:${NC}"
-echo -e "  Project directory: ${SCRIPT_DIR}"
+echo -e "  Project directory: /opt/homelab"
 echo -e "  Management user: homelab"
 echo -e "  Original user: ${REAL_USER}"
 echo ""
@@ -65,10 +74,13 @@ if ! command -v ansible-playbook >/dev/null 2>&1; then
     echo -e "${GREEN}✅ Ansible installed${NC}"
 fi
 
+# Set ownership of project directory
+chown -R root:root /opt/homelab
+
 # Run Stage 1 bootstrap playbook
 echo -e "${YELLOW}🎭 Running Stage 1 bootstrap playbook...${NC}"
 
-cd "${SCRIPT_DIR}"
+cd "/opt/homelab"
 
 # Create minimal inventory for localhost
 mkdir -p ansible/inventory
@@ -108,7 +120,7 @@ if [ $? -eq 0 ]; then
    3. Click "Deploy Now" for Stage 2 deployment
 
 👤 Management user: homelab
-🏠 Project location: /home/homelab/homelab-project/
+🏠 Project location: /opt/homelab/
 
 📱 The web interface will guide you through:
    • Setting admin passwords
@@ -117,12 +129,14 @@ if [ $? -eq 0 ]; then
    • Managing storage allocations
    • Live deployment monitoring
 
-🚀 Stage 2 will automatically:
+🚀 Stage 2 will run as homelab user and:
    • Deploy K3s Kubernetes cluster
    • Set up Longhorn distributed storage
    • Install MetalLB load balancer
    • Deploy selected services (Portainer, Registry, etc.)
    • Configure service discovery
+
+🔐 The homelab user has full sudo permissions for system management.
 
 EOF
     echo -e "${NC}"

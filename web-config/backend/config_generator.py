@@ -12,7 +12,8 @@ import ipaddress
 
 class ConfigGenerator:
     def __init__(self):
-        self.repo_root = Path(__file__).parent.parent.parent
+        # When running from /opt/homelab, use that as the repo root
+        self.repo_root = Path("/opt/homelab")
         self.ansible_dir = self.repo_root / "ansible"
         self.terraform_dir = self.repo_root / "terraform"
         self.configs_dir = self.repo_root / "configs"

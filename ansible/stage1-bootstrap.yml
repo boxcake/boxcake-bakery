@@ -9,7 +9,7 @@
   vars:
     homelab_user: "homelab"
     homelab_group: "homelab"
-    homelab_home: "/home/{{ homelab_user }}"
+    homelab_home: "/opt/homelab"
     web_config_port: 8080
 
   tasks:
@@ -52,7 +52,7 @@
         group: "{{ homelab_group }}"
         home: "{{ homelab_home }}"
         shell: /bin/bash
-        create_home: yes
+        create_home: no  # We'll manage the directory ourselves
         state: present
 
     - name: Add homelab user to sudo group
@@ -61,12 +61,11 @@
         groups: sudo
         append: yes
 
-    - name: Create sudoers file for homelab group
+    - name: Create sudoers file for homelab user with full permissions
       copy:
         content: |
-          # Homelab infrastructure management permissions
-          %{{ homelab_group }} ALL=(ALL) NOPASSWD: /bin/systemctl *, /usr/bin/kubectl *, /usr/local/bin/k3s *, /sbin/iptables *, /bin/mount *, /bin/umount *, /usr/bin/docker *, /snap/bin/*, /usr/local/bin/*, /usr/bin/snap *
-          %{{ homelab_group }} ALL=(root) NOPASSWD: /usr/bin/ansible-playbook *
+          # Homelab user full administrative permissions
+          {{ homelab_user }} ALL=(ALL) NOPASSWD: ALL
         dest: /etc/sudoers.d/homelab
         mode: '0440'
         validate: 'visudo -cf %s'
@@ -83,56 +82,32 @@
       become_user: "{{ homelab_user }}"
       become: yes
 
-    - name: Create homelab project directory
+    - name: Ensure homelab directory exists and has correct ownership
       file:
-        path: "{{ homelab_home }}/homelab-project"
+        path: "{{ homelab_home }}"
         state: directory
         owner: "{{ homelab_user }}"
         group: "{{ homelab_group }}"
         mode: '0755'
-
-    - name: Copy project files using cp (run as root to avoid permission issues)
-      shell: |
-        cp -r "{{ playbook_dir }}/../"* "{{ homelab_home }}/homelab-project/" 2>/dev/null || true
-        # Handle hidden files separately
-        cp -r "{{ playbook_dir }}/../".[^.]* "{{ homelab_home }}/homelab-project/" 2>/dev/null || true
-      args:
-        warn: false
-
-    - name: Remove unwanted directories
-      file:
-        path: "{{ homelab_home }}/homelab-project/{{ item }}"
-        state: absent
-      loop:
-        - .git
-        - web-config/frontend/node_modules
-        - web-config/backend/venv
-        - web-config/build
-
-    - name: Set ownership of entire project directory
-      file:
-        path: "{{ homelab_home }}/homelab-project"
-        owner: "{{ homelab_user }}"
-        group: "{{ homelab_group }}"
         recurse: yes
 
     - name: Create Python virtual environment for web service
-      command: python3 -m venv "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+      command: python3 -m venv "{{ homelab_home }}/web-config/backend/venv"
       become_user: "{{ homelab_user }}"
       become: yes
       args:
-        creates: "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+        creates: "{{ homelab_home }}/web-config/backend/venv"
 
     - name: Install Python dependencies
       pip:
-        requirements: "{{ homelab_home }}/homelab-project/web-config/backend/requirements.txt"
-        virtualenv: "{{ homelab_home }}/homelab-project/web-config/backend/venv"
+        requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
+        virtualenv: "{{ homelab_home }}/web-config/backend/venv"
       become_user: "{{ homelab_user }}"
       become: yes
 
     - name: Install npm dependencies
       npm:
-        path: "{{ homelab_home }}/homelab-project/web-config/frontend"
+        path: "{{ homelab_home }}/web-config/frontend"
         state: present
       become_user: "{{ homelab_user }}"
       become: yes
@@ -140,7 +115,7 @@
     - name: Build React frontend
       command: npm run build
       args:
-        chdir: "{{ homelab_home }}/homelab-project/web-config/frontend"
+        chdir: "{{ homelab_home }}/web-config/frontend"
       become_user: "{{ homelab_user }}"
       become: yes
 
