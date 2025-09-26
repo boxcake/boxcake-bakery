@@ -74,9 +74,9 @@
   when: not venv_exists.stat.exists
 
 - name: Install Python dependencies for web service
-  pip:
-    requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
-    virtualenv: "{{ homelab_home }}/venv"
+  shell: |
+    source {{ homelab_home }}/venv/bin/activate
+    pip install -r {{ homelab_home }}/web-config/backend/requirements.txt
   become_user: "{{ homelab_user }}"
   become: yes
 
