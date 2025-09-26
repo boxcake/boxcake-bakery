@@ -70,18 +70,6 @@
         mode: '0440'
         validate: 'visudo -cf %s'
 
-    - name: Install Ansible for homelab user
-      pip:
-        name: ansible
-        state: present
-        break_system_packages: yes
-        executable: pip3
-
-    - name: Install Ansible collections
-      command: ansible-galaxy collection install kubernetes.core community.general
-      become_user: "{{ homelab_user }}"
-      become: yes
-
     - name: Ensure homelab directory exists and has correct ownership
       file:
         path: "{{ homelab_home }}"
@@ -91,33 +79,51 @@
         mode: '0755'
         recurse: yes
 
+    - name: Install Ansible for homelab user
+      pip:
+        name: ansible
+        state: present
+        break_system_packages: yes
+        executable: pip3
+
+    - name: Create .ansible directory for homelab user
+      file:
+        path: "{{ homelab_home }}/.ansible"
+        state: directory
+        owner: "{{ homelab_user }}"
+        group: "{{ homelab_group }}"
+        mode: '0755'
+
+    - name: Install Ansible collections (as root initially)
+      command: ansible-galaxy collection install kubernetes.core community.general --force
+
+    - name: Copy Ansible collections to homelab user directory
+      shell: |
+        mkdir -p {{ homelab_home }}/.ansible
+        if [ -d /root/.ansible ]; then
+          cp -r /root/.ansible/* {{ homelab_home }}/.ansible/ || true
+        fi
+        chown -R {{ homelab_user }}:{{ homelab_group }} {{ homelab_home }}/.ansible
+
     - name: Create Python virtual environment for web service
-      command: python3 -m venv "{{ homelab_home }}/web-config/backend/venv"
-      become_user: "{{ homelab_user }}"
-      become: yes
+      shell: |
+        sudo -u {{ homelab_user }} python3 -m venv "{{ homelab_home }}/web-config/backend/venv"
       args:
         creates: "{{ homelab_home }}/web-config/backend/venv"
 
     - name: Install Python dependencies
-      pip:
-        requirements: "{{ homelab_home }}/web-config/backend/requirements.txt"
-        virtualenv: "{{ homelab_home }}/web-config/backend/venv"
-      become_user: "{{ homelab_user }}"
-      become: yes
+      shell: |
+        sudo -u {{ homelab_user }} {{ homelab_home }}/web-config/backend/venv/bin/pip install -r {{ homelab_home }}/web-config/backend/requirements.txt
 
     - name: Install npm dependencies
-      npm:
-        path: "{{ homelab_home }}/web-config/frontend"
-        state: present
-      become_user: "{{ homelab_user }}"
-      become: yes
+      shell: |
+        cd {{ homelab_home }}/web-config/frontend
+        sudo -u {{ homelab_user }} npm install
 
     - name: Build React frontend
-      command: npm run build
-      args:
-        chdir: "{{ homelab_home }}/web-config/frontend"
-      become_user: "{{ homelab_user }}"
-      become: yes
+      shell: |
+        cd {{ homelab_home }}/web-config/frontend
+        sudo -u {{ homelab_user }} npm run build
 
     - name: Create systemd service for web configuration
       template:

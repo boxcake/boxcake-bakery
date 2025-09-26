@@ -199,7 +199,7 @@ class DeploymentManager:
         os.chdir(self.ansible_dir)
 
         try:
-            # Run the main site.yml playbook with sudo
+            # Run the main site.yml playbook - we're already running as homelab user with sudo permissions
             cmd = [
                 "sudo", ansible_playbook_cmd,
                 "-i", "inventory/hosts.yml",
@@ -208,6 +208,7 @@ class DeploymentManager:
             ]
 
             await self._add_log(deployment_id, f"Running: {' '.join(cmd)}")
+            await self._add_log(deployment_id, f"Working directory: {self.ansible_dir}")
             result = await self._run_command(cmd, deployment_id, stream_logs=True)
             if result.returncode != 0:
                 raise Exception("Stage 2 Ansible playbook execution failed")
