@@ -107,7 +107,11 @@ class DeploymentManager:
         await self._add_log(deployment_id, f"Running as user: {current_user}")
 
         # Verify we can find ansible-playbook
-        ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+        # TODO - Why isnt this find function working?
+                # ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+
+        ansible_playbook_cmd = "/opt/homelab/venv/bin/ansible-playbook"
+
         if not ansible_playbook_cmd:
             raise Exception("ansible-playbook not found. Stage 1 bootstrap may not have completed properly.")
 
@@ -191,7 +195,9 @@ class DeploymentManager:
         await self._add_log(deployment_id, "Starting Stage 2 full deployment...")
 
         # Find ansible-playbook command
-        ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+        # ansible_playbook_cmd = await self._find_command(['ansible-playbook'], deployment_id)
+        ansible_playbook_cmd = "/opt/homelab/venv/bin/ansible-playbook"
+
         if not ansible_playbook_cmd:
             raise Exception("ansible-playbook command not found")
 
@@ -228,18 +234,20 @@ class DeploymentManager:
             "ansible-playbook"  # fallback to PATH
         ]
 
-        ansible_playbook_cmd = None
-        for path in ansible_playbook_paths:
-            try:
-                result = subprocess.run([path, "--version"],
-                                      capture_output=True,
-                                      timeout=10)
-                if result.returncode == 0:
-                    ansible_playbook_cmd = path
-                    await self._add_log(deployment_id, f"Found ansible-playbook at: {path}")
-                    break
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                continue
+        # ansible_playbook_cmd = None
+        ansible_playbook_cmd = "/opt/homelab/venv/bin/ansible-playbook"
+
+        # for path in ansible_playbook_paths:
+        #     try:
+        #         result = subprocess.run([path, "--version"],
+        #                               capture_output=True,
+        #                               timeout=10)
+        #         if result.returncode == 0:
+        #             ansible_playbook_cmd = path
+        #             await self._add_log(deployment_id, f"Found ansible-playbook at: {path}")
+        #             break
+        #     except (subprocess.TimeoutExpired, FileNotFoundError):
+        #         continue
 
         if not ansible_playbook_cmd:
             raise Exception("ansible-playbook command not found")
