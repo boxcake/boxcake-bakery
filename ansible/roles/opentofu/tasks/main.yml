@@ -57,19 +57,29 @@
   shell: |
     set -e
     echo "Starting OpenTofu apply at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    echo "Working directory: $(pwd)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
-    # Run tofu apply with detailed logging
-    tofu apply -auto-approve 2>&1 | tee -a {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    # Run tofu apply with output only to log file to avoid Ansible buffer overflow
+    echo "Running: tofu apply -auto-approve" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    tofu apply -auto-approve >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log 2>&1
+    TOFU_EXIT_CODE=$?
 
-    # Capture exit code
-    TOFU_EXIT_CODE=${PIPESTATUS[0]}
     echo "OpenTofu apply completed with exit code: $TOFU_EXIT_CODE at $(date)" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
 
     # If failed, also log error details
     if [ $TOFU_EXIT_CODE -ne 0 ]; then
       echo "ERROR: OpenTofu apply failed with exit code $TOFU_EXIT_CODE" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
       echo "Attempting to capture state information..." >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
-      tofu show -json >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-state.json 2>/dev/null || echo "Could not capture state" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+      tofu show -json >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-state.json 2>&1 || echo "Could not capture state" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    else
+      echo "SUCCESS: OpenTofu apply completed successfully" >> {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+    fi
+
+    # Output a summary for Ansible (short message)
+    if [ $TOFU_EXIT_CODE -eq 0 ]; then
+      echo "OpenTofu apply successful - check /opt/homelab/logs/tofu-apply.log for details"
+    else
+      echo "OpenTofu apply failed with exit code $TOFU_EXIT_CODE - check /opt/homelab/logs/tofu-apply.log for details"
     fi
 
     exit $TOFU_EXIT_CODE
@@ -83,15 +93,12 @@
 - name: Display OpenTofu apply summary
   debug:
     msg: |
-      OpenTofu apply completed!
-      Exit code: {{ tofu_apply_result.rc | default('unknown') }}
-      Log file: {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+      {{ tofu_apply_result.stdout | default('OpenTofu apply completed') }}
 
-      {% if tofu_apply_result.rc == 0 %}
-      ✅ Apply completed successfully
-      {% else %}
-      ❌ Apply failed - check log file for details
-      {% endif %}
+      📁 Log file: {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
+      📊 Exit code: {{ tofu_apply_result.rc | default('unknown') }}
+
+      To view detailed output: cat {{ homelab_home | default('/opt/homelab') }}/logs/tofu-apply.log
   when:
     - not (terraform_plan_only | default(false))
     - tofu_apply_result is defined
