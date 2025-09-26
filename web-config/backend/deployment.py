@@ -116,6 +116,7 @@ class DeploymentManager:
     async def _find_command(self, commands: list, deployment_id: str) -> str:
         """Find a command in the system"""
         search_paths = [
+            "/opt/homelab/venv/bin/"
             "/usr/local/bin/",
             "/usr/bin/",
             "/home/homelab/.local/bin/",
