@@ -68,13 +68,12 @@ EOF
 fi
 
 # Delete old working directories
+echo "Cleaning up working directories..."
+
 rm -rf ${INSTALL_DIR}
 mkdir -p ${INSTALL_DIR}
 chown homelab:homelab ${INSTALL_DIR}
 chmod g+s ${INSTALL_DIR}
-
-# Become the homelab user
-su homelab -
 
 cd ${INSTALL_DIR}
 
