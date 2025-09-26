@@ -31,6 +31,7 @@ apt-get install -y \
   python3 \
   python3-venv \
   python3-pip \
+  gnupg \
   software-properties-common \
   open-iscsi \
   python3-pip \
@@ -48,6 +49,35 @@ apt-get install -y \
   avahi-daemon \
   libnss-mdns
 
+echo "   Installing OpenTofu"
+# Check if OpenTofu is installed
+if command -v tofu &> /dev/null; then
+    echo "OpenTofu is already installed."
+    tofu --version
+else
+  # Dependencies
+  apt-get install -y curl gnupg software-properties-common
+
+  # Get installer
+  curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh -o install-opentofu.sh
+
+  # Make it executable and run it
+  chmod +x install-opentofu.sh
+
+  ./install-opentofu.sh --install-method deb
+
+  # Clean up
+  rm install-opentofu.sh
+fi
+
+# Verify installation
+if command -v tofu &> /dev/null; then
+    echo "OpenTofu has been successfully installed!"
+    tofu --version
+else
+    echo "Installation failed. Please check the error messages above."
+    exit 1
+fi
 
 # Create homelab user and group
 echo "👤 Creating homelab user..."
