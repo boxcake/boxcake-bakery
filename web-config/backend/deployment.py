@@ -344,12 +344,17 @@ class DeploymentManager:
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                text=True
+                stderr=asyncio.subprocess.STDOUT
             )
 
-            async for line in process.stdout:
-                await self._add_log(deployment_id, line.rstrip())
+            # Read lines and decode from bytes to string
+            while True:
+                line_bytes = await process.stdout.readline()
+                if not line_bytes:
+                    break
+                line = line_bytes.decode('utf-8').rstrip()
+                if line:  # Only log non-empty lines
+                    await self._add_log(deployment_id, line)
 
             await process.wait()
             return_code = process.returncode
@@ -366,14 +371,15 @@ class DeploymentManager:
             result = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True,
                 timeout=300  # 5 minute timeout
             )
 
             if result.stdout:
-                await self._add_log(deployment_id, result.stdout)
+                stdout = result.stdout.decode('utf-8')
+                await self._add_log(deployment_id, stdout)
             if result.stderr:
-                await self._add_log(deployment_id, f"STDERR: {result.stderr}")
+                stderr = result.stderr.decode('utf-8')
+                await self._add_log(deployment_id, f"STDERR: {stderr}")
 
             return result
 
