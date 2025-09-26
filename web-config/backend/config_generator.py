@@ -69,6 +69,10 @@ class ConfigGenerator:
         generated_files = []
 
         try:
+            # Ensure directories exist
+            self.configs_dir.mkdir(parents=True, exist_ok=True)
+            (self.ansible_dir / "vars").mkdir(parents=True, exist_ok=True)
+
             # Generate user config file
             user_config_path = self.configs_dir / "user-config.yaml"
             with open(user_config_path, 'w') as f:
