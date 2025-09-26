@@ -136,7 +136,10 @@ async def save_config(config: HomeLabConfig):
             "generated_files": generated_files
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        print(f"Error in save_config: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/api/deployment/start")
 async def start_deployment():
