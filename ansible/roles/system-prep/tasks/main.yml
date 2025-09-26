@@ -8,35 +8,6 @@
     autoclean: yes
   tags: [packages]
 
-- name: Install essential system packages
-  apt:
-    name:
-      - curl
-      - wget
-      - git
-      - unzip
-      - apt-transport-https
-      - ca-certificates
-      - gnupg
-      - lsb-release
-      - software-properties-common
-      - open-iscsi
-      - python3-pip
-      - python3-dev
-      - python3-setuptools
-      - python3-kubernetes  # Kubernetes Python client
-      - python3-yaml        # PyYAML
-      - python3-jsonpatch   # JSON patch library
-      - jq
-      - tree
-      - htop
-      - docker
-      - docker-compose
-      - avahi-daemon
-      - libnss-mdns
-    state: present
-  tags: [packages]
-
 - name: Install Go (latest version)
   shell: |
     GO_VERSION="1.23.4"

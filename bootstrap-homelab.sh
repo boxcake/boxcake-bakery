@@ -19,12 +19,31 @@ fi
 # Ensure required system packages are installed
 echo "📦 Installing system dependencies..."
 apt-get update
-apt-get install -y python3 python3-venv python3-pip
+apt-get install -y \
+  python3 \
+  python3-venv \
+  python3-pip \
+  software-properties-common \
+  open-iscsi \
+  python3-pip \
+  python3-venv \
+  python3-dev \
+  python3-setuptools \
+  python3-kubernetes \
+  python3-yaml \
+  python3-jsonpatch \
+  jq \
+  tree \
+  htop \
+  docker \
+  docker-compose \
+  avahi-daemon \
+  libnss-mdns
 
 # Create homelab user and group
 echo "👤 Creating homelab user..."
 if ! id "homelab" &>/dev/null; then
-    useradd -m -s /bin/bash -d /home/homelab homelab
+    useradd -m -s /bin/bash -d /opt/homelab homelab
     usermod -aG sudo homelab
 
     # Create sudoers file for homelab user
@@ -39,8 +58,6 @@ EOF
 fi
 
 # Create homelab directory structure
-echo "📁 Creating /opt/homelab directory..."
-mkdir -p /opt/homelab
 
 # Set up Python virtual environment for Ansible
 VENV_PATH="/opt/homelab/venv"
