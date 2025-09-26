@@ -83,21 +83,33 @@
       become_user: "{{ homelab_user }}"
       become: yes
 
-    - name: Copy project files to homelab user directory
-      synchronize:
-        src: "{{ playbook_dir }}/../"
-        dest: "{{ homelab_home }}/homelab-project/"
-        delete: yes
-        rsync_opts:
-          - "--exclude=.git"
-          - "--exclude=**/__pycache__"
-          - "--exclude=**/node_modules"
-          - "--exclude=**/venv"
-          - "--exclude=**/build"
-      become_user: "{{ homelab_user }}"
-      become: yes
+    - name: Create homelab project directory
+      file:
+        path: "{{ homelab_home }}/homelab-project"
+        state: directory
+        owner: "{{ homelab_user }}"
+        group: "{{ homelab_group }}"
+        mode: '0755'
 
-    - name: Set ownership of project directory
+    - name: Copy project files using cp (run as root to avoid permission issues)
+      shell: |
+        cp -r "{{ playbook_dir }}/../"* "{{ homelab_home }}/homelab-project/" 2>/dev/null || true
+        # Handle hidden files separately
+        cp -r "{{ playbook_dir }}/../".[^.]* "{{ homelab_home }}/homelab-project/" 2>/dev/null || true
+      args:
+        warn: false
+
+    - name: Remove unwanted directories
+      file:
+        path: "{{ homelab_home }}/homelab-project/{{ item }}"
+        state: absent
+      loop:
+        - .git
+        - web-config/frontend/node_modules
+        - web-config/backend/venv
+        - web-config/build
+
+    - name: Set ownership of entire project directory
       file:
         path: "{{ homelab_home }}/homelab-project"
         owner: "{{ homelab_user }}"
