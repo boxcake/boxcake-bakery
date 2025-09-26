@@ -8,6 +8,8 @@
     homelab_group: "homelab"
     homelab_home: "/opt/homelab"
     ansible_python_interpreter: /opt/homelab/venv/bin/python
+    pip_path: /opt/homelab/venv/bin/pip
+
   roles:
     - websetup
 

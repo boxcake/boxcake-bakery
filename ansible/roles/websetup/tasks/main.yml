@@ -53,7 +53,7 @@
 
 - name: Install Python dependencies for web service
   shell: |
-    pip install -r {{ homelab_home }}/web-config/backend/requirements.txt
+    "{{ pip_path }}" install -r {{ homelab_home }}/web-config/backend/requirements.txt
   become_user: "{{ homelab_user }}"
   become: yes
 
