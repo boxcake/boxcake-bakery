@@ -75,3 +75,22 @@ variable "metallb_pool_name" {
   type        = string
   default     = "homelab-services"
 }
+
+# Service enablement flags
+variable "enable_portainer" {
+  description = "Enable Portainer container management UI"
+  type        = bool
+  default     = true
+}
+
+variable "enable_registry" {
+  description = "Enable Docker registry"
+  type        = bool
+  default     = true
+}
+
+variable "enable_registry_ui" {
+  description = "Enable Registry UI web interface"
+  type        = bool
+  default     = true
+}

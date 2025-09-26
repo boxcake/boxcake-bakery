@@ -8,6 +8,7 @@
   vars_files:
     - vars/main.yml
     - vars/network.yml
+    - vars/user-overrides.yml
   
   pre_tasks:
     - name: Update package cache
@@ -37,6 +38,7 @@
 
     - role: kubelish
       tags: [kubelish, mdns]
+      when: not skip_kubelish | default(false)
 
     - role: opentofu
       tags: [opentofu, terraform, infrastructure]
