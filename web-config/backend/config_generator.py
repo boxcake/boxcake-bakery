@@ -134,7 +134,8 @@ class ConfigGenerator:
         ansible_vars = {
             'portainer_admin_password': config['admin_password'],
             'portainer_storage_size': config['storage']['portainer_size'],
-            'registry_storage_size': config['storage']['registry_size']
+            'registry_storage_size': config['storage']['registry_size'],
+            'gitea_storage_size': config['storage'].get('gitea_size', '10Gi')
         }
 
         # Add service-specific variables based on selection
@@ -147,6 +148,8 @@ class ConfigGenerator:
             ansible_vars['skip_registry_ui'] = True
         if not services.get('kubelish', True):
             ansible_vars['skip_kubelish'] = True
+        if not services.get('gitea', False):
+            ansible_vars['skip_gitea'] = True
 
         with open(self.ansible_dir / "vars" / "user-overrides.yml", 'w') as f:
             f.write("---\n")
@@ -160,8 +163,16 @@ class ConfigGenerator:
             'portainer_admin_password': config['admin_password'],
             'portainer_storage_size': config['storage']['portainer_size'],
             'registry_storage_size': config['storage']['registry_size'],
+            'gitea_storage_size': config['storage'].get('gitea_size', '10Gi'),
             'metallb_pool_name': 'homelab-services'
         }
+
+        # Add service enable/disable flags
+        services = config['services']
+        terraform_vars['enable_portainer'] = services.get('portainer', True)
+        terraform_vars['enable_registry'] = services.get('registry', True)
+        terraform_vars['enable_registry_ui'] = services.get('registry_ui', True)
+        terraform_vars['enable_gitea'] = services.get('gitea', False)
 
         # Generate tfvars file
         tfvars_content = []

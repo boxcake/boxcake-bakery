@@ -2,9 +2,9 @@ import React from 'react'
 import { HardDrive, Info } from 'lucide-react'
 
 const STORAGE_PRESETS = [
-  { label: 'Minimal', portainer: '1Gi', registry: '5Gi' },
-  { label: 'Recommended', portainer: '2Gi', registry: '10Gi' },
-  { label: 'Large', portainer: '5Gi', registry: '50Gi' }
+  { label: 'Minimal', portainer: '1Gi', registry: '5Gi', gitea: '5Gi' },
+  { label: 'Recommended', portainer: '2Gi', registry: '10Gi', gitea: '10Gi' },
+  { label: 'Large', portainer: '5Gi', registry: '50Gi', gitea: '50Gi' }
 ]
 
 const StorageStep = ({ configuration, onUpdate }) => {
@@ -23,7 +23,8 @@ const StorageStep = ({ configuration, onUpdate }) => {
     onUpdate({
       storage: {
         portainer_size: preset.portainer,
-        registry_size: preset.registry
+        registry_size: preset.registry,
+        gitea_size: preset.gitea
       }
     })
   }
@@ -72,7 +73,8 @@ const StorageStep = ({ configuration, onUpdate }) => {
   const getTotalStorage = () => {
     const portainerBytes = parseStorageSize(storage.portainer_size || '0')
     const registryBytes = parseStorageSize(storage.registry_size || '0')
-    return portainerBytes + registryBytes
+    const giteaBytes = parseStorageSize(storage.gitea_size || '0')
+    return portainerBytes + registryBytes + giteaBytes
   }
 
   return (
@@ -159,9 +161,39 @@ const StorageStep = ({ configuration, onUpdate }) => {
             </div>
           )}
         </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            <HardDrive size={16} style={{ marginRight: '8px' }} />
+            Gitea Storage
+          </label>
+          <div className="form-description">
+            Storage for Git repositories and Gitea data
+          </div>
+          <input
+            type="text"
+            className={`form-input ${!validateStorageSize(storage.gitea_size) && storage.gitea_size ? 'error' : ''}`}
+            value={storage.gitea_size || ''}
+            onChange={(e) => handleStorageChange('gitea_size', e.target.value)}
+            placeholder="10Gi"
+          />
+          {storage.gitea_size && (
+            <div style={{ marginTop: '8px', fontSize: '0.9rem', color: '#666' }}>
+              {validateStorageSize(storage.gitea_size) ? (
+                <span style={{ color: '#27ae60' }}>
+                  ✓ {formatBytes(parseStorageSize(storage.gitea_size))}
+                </span>
+              ) : (
+                <span style={{ color: '#e74c3c' }}>
+                  ✗ Invalid storage format (e.g., 10Gi, 5000Mi)
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {(storage.portainer_size || storage.registry_size) && (
+      {(storage.portainer_size || storage.registry_size || storage.gitea_size) && (
         <div style={{
           background: '#f8f9ff',
           border: '1px solid #e1e5e9',
@@ -188,6 +220,15 @@ const StorageStep = ({ configuration, onUpdate }) => {
                 <div style={{ fontWeight: '600', color: '#555' }}>Registry</div>
                 <div style={{ fontSize: '1.2rem', color: '#667eea' }}>
                   {formatBytes(parseStorageSize(storage.registry_size))}
+                </div>
+              </div>
+            )}
+
+            {storage.gitea_size && validateStorageSize(storage.gitea_size) && (
+              <div>
+                <div style={{ fontWeight: '600', color: '#555' }}>Gitea</div>
+                <div style={{ fontSize: '1.2rem', color: '#667eea' }}>
+                  {formatBytes(parseStorageSize(storage.gitea_size))}
                 </div>
               </div>
             )}

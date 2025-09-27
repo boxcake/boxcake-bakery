@@ -385,7 +385,112 @@ dns_records:
 
 ---
 
-### 5. Modular Component Selection System
+### 5. Helm Chart Migration for Internal Applications
+**Epic:** Migrate platform applications from Terraform to Helm charts
+
+**Description:**
+While Portainer provides excellent application deployment capabilities for end users, the internal platform applications (Portainer, Registry, future core services) would benefit from Helm chart management for better lifecycle management, templating, and version control.
+
+**Current State:**
+- Portainer: Deployed via raw Kubernetes resources in `terraform/portainer.tf`
+- Registry: Deployed via raw Kubernetes resources in `terraform/registry.tf`
+- Registry UI: Deployed via raw Kubernetes resources in `terraform/registry-ui.tf`
+- Infrastructure components (Longhorn, MetalLB) already use Helm via Ansible
+
+**Benefits of Helm Migration:**
+- **Version Management:** Easy upgrades and rollbacks for platform services
+- **Templating:** Reduce boilerplate with reusable chart templates
+- **Values Management:** Cleaner configuration through values.yaml files
+- **Ecosystem Integration:** Access to community Helm charts where available
+- **Consistent Tooling:** Align with infrastructure components already using Helm
+- **Release Management:** Better tracking of deployment history and status
+
+**Proposed Architecture:**
+```
+homelab-platform/
+├── charts/
+│   ├── homelab-app/           # Generic template chart for platform apps
+│   ├── portainer/             # Portainer-specific chart
+│   └── registry/              # Registry + Registry UI chart
+└── values/
+    ├── portainer/
+    │   └── values.yaml
+    └── registry/
+        └── values.yaml
+```
+
+**Implementation Tasks:**
+- [ ] Create generic "homelab-app" Helm chart template with common patterns
+  - PersistentVolumeClaim with Longhorn storage class
+  - Service with MetalLB LoadBalancer annotations
+  - Deployment with security contexts and resource limits
+  - Kubelish mDNS service discovery annotations
+- [ ] Convert Portainer Terraform to Helm chart
+  - Migrate kubernetes resources to Helm templates
+  - Create values.yaml with current configuration options
+  - Test deployment and functionality parity
+- [ ] Convert Registry and Registry UI to combined Helm chart
+  - Create multi-service chart with registry + UI components
+  - Maintain current configuration options
+  - Ensure proper service dependencies
+- [ ] Update Ansible playbook to deploy via Helm instead of Terraform
+  - Replace `tofu apply` with `helm install/upgrade` commands
+  - Add Helm repo management if using external charts
+  - Maintain current variable passing from web config
+- [ ] Create migration path for existing deployments
+  - Export current Terraform state
+  - Import resources into Helm releases
+  - Verify no service interruption during migration
+- [ ] Update web configuration interface
+  - Modify backend to generate values.yaml instead of .tfvars
+  - Update deployment process to use Helm commands
+  - Maintain current user experience
+
+**Integration with Ansible:**
+```yaml
+- name: Deploy Portainer via Helm
+  kubernetes.core.helm:
+    name: portainer
+    chart_ref: /opt/homelab/charts/portainer
+    release_namespace: default
+    values_files:
+      - /opt/homelab/values/portainer/values.yaml
+    create_namespace: false
+
+- name: Deploy Registry via Helm
+  kubernetes.core.helm:
+    name: registry
+    chart_ref: /opt/homelab/charts/registry
+    release_namespace: default
+    values_files:
+      - /opt/homelab/values/registry/values.yaml
+```
+
+**User Impact:**
+- **No Change:** Users continue using Portainer for their own application deployments
+- **Better Platform:** More reliable platform service updates and management
+- **Future Ready:** Easier to add new platform services using established patterns
+
+**Technical Benefits:**
+- **Reduced Terraform Complexity:** Simpler Terraform state management
+- **Better Abstractions:** Helm templates eliminate resource duplication
+- **Community Charts:** Option to use existing charts where appropriate
+- **Release Tracking:** Built-in deployment history and status monitoring
+
+**Acceptance Criteria:**
+- Portainer deployed via Helm with identical functionality to current Terraform
+- Registry and Registry UI deployed via single Helm chart
+- Web configuration interface continues to work without user-visible changes
+- Migration from Terraform to Helm preserves all existing data and configurations
+- Platform services can be easily updated via `helm upgrade`
+- Documentation updated to reflect new deployment architecture
+
+**Estimated Effort:** Medium (3-4 weeks)
+**Risk:** Low (Helm is well-established, current infrastructure already uses it)
+
+---
+
+### 6. Modular Component Selection System
 **Epic:** Allow users to choose which services to deploy
 
 **Description:**

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Container, Database, Globe, Wifi } from 'lucide-react'
+import { Container, Database, Globe, Wifi, GitBranch } from 'lucide-react'
 
 const SERVICES = [
   {
@@ -32,6 +32,14 @@ const SERVICES = [
     description: 'Service discovery via mDNS for easy access to services',
     icon: Wifi,
     recommended: true,
+    dependencies: []
+  },
+  {
+    key: 'gitea',
+    name: 'Gitea',
+    description: 'Self-hosted Git service with web UI, issue tracking, and CI/CD',
+    icon: GitBranch,
+    recommended: false,
     dependencies: []
   }
 ]
@@ -90,6 +98,10 @@ const ServicesStep = ({ configuration, onUpdate }) => {
     if (services.kubelish) {
       cpu += 0.05
       memory += 32
+    }
+    if (services.gitea) {
+      cpu += 0.2
+      memory += 256
     }
 
     return { cpu, memory }

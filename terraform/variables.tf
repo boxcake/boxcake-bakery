@@ -94,3 +94,41 @@ variable "enable_registry_ui" {
   type        = bool
   default     = true
 }
+
+# Gitea Configuration
+variable "enable_gitea" {
+  description = "Enable Gitea Git server"
+  type        = bool
+  default     = false
+}
+
+variable "gitea_image" {
+  description = "Gitea container image"
+  type        = string
+  default     = "gitea/gitea:1.21.11"
+}
+
+variable "gitea_storage_size" {
+  description = "Storage size for Gitea persistent volume"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "gitea_admin_username" {
+  description = "Gitea admin username"
+  type        = string
+  default     = "admin"
+}
+
+variable "gitea_admin_password" {
+  description = "Gitea admin password"
+  type        = string
+  default     = "homelab123!"
+  sensitive   = true
+}
+
+variable "gitea_admin_email" {
+  description = "Gitea admin email"
+  type        = string
+  default     = "admin@homelab.local"
+}

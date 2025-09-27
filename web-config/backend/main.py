@@ -40,10 +40,12 @@ class ServicesConfig(BaseModel):
     registry: bool = True
     registry_ui: bool = True
     kubelish: bool = True
+    gitea: bool = False
 
 class StorageConfig(BaseModel):
     portainer_size: str = "2Gi"
     registry_size: str = "10Gi"
+    gitea_size: str = "10Gi"
 
 class HomeLabConfig(BaseModel):
     admin_password: str
