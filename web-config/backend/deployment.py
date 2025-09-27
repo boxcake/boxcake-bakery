@@ -15,8 +15,8 @@ class DeploymentManager:
     def __init__(self):
         # When running from /opt/homelab, use that as the repo root
         self.repo_root = Path("/opt/homelab")
-        self.ansible_dir = self.repo_root / "ansible"
-        self.terraform_dir = self.repo_root / "terraform"
+        self.ansible_dir = f"{self.repo_root}/ansible"
+        self.terraform_dir = f"{self.repo_root}/terraform"
         self.deployments = {}  # In-memory storage, could be replaced with database
 
     async def start_deployment(self, config: Dict[str, Any]) -> str:

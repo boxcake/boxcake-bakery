@@ -32,6 +32,11 @@
     mode: '0644'
   notify: restart k3s
 
+- name: Make sure .kube dir exists
+  file:
+    path: "{{ homelab_home }}/.kube"
+    state: directory
+
 - name: Copy kubeconfig to homelab user
   copy:
     src: /etc/rancher/k3s/k3s.yaml
