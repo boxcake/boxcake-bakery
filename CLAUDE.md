@@ -4,19 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a complete home lab automation system that uses Ansible + OpenTofu/Terraform to deploy Kubernetes infrastructure on Raspberry Pi systems. The architecture follows a two-phase deployment pattern:
+This is a complete home software development lab automation system that uses Ansible + OpenTofu to deploy Kubernetes infrastructure on Raspberry Pi systems. The architecture follows a three-phase deployment pattern:
 
-1. **Infrastructure Phase (Ansible)**: Deploys K3s Kubernetes, Docker, networking, storage, and base services
-2. **Application Phase (OpenTofu)**: Deploys containerized applications and services on the Kubernetes cluster
+1. **Deploy web-app (Shell+Ansible)**: Deploys a lightweight webapp which is used to collect configuration information
+2. **Infrastructure Phase (Ansible)**: Deploys K3s Kubernetes, Docker, networking, storage, and base services
+3. **Application Phase (OpenTofu)**: Deploys containerized applications and services on the Kubernetes cluster
 
 ### Key Components
 
 **Ansible Infrastructure (`ansible/`):**
-- Main entry point: `ansible/site.yml`
+- First playbook: `ansible/websetup.yml`
+- Deploys a web service with configuration wizard
+- Second playbook: `ansible\stage2-deploy.yml`
 - Deploys K3s single-node Kubernetes cluster with Longhorn storage
 - Configures MetalLB load balancer with IP address pools
 - Sets up Kubelish for mDNS service discovery
-- Automatically runs OpenTofu deployment as final step
+- Automatically runs OpenTofu deployment
+- Autoconfigures Portainer with admin credentials and local registry
 
 **OpenTofu/Terraform (`terraform/`):**
 - Kubernetes-native resource definitions
@@ -37,32 +41,9 @@ This is a complete home lab automation system that uses Ansible + OpenTofu/Terra
 sudo bash ./bootstrap-homelab.sh
 
 # Stage 2: Automatic via web interface after configuration
-# Visit http://your-ip:8080 and click "Deploy Now"
+# Visit http://your-ip:8080 provide config data and click "Deploy Now"
 ```
 Two-stage deployment with web-based configuration interface.
-
-### Legacy Direct Deployment (Advanced)
-```bash
-sudo bash ./setup-via-ansible.sh
-```
-Direct deployment using default configuration values.
-
-### Manual Deployment (Alternative)
-```bash
-cd ansible/
-ansible-playbook -i inventory site.yml
-
-# Partial deployments
-ansible-playbook -i inventory site.yml --skip-tags opentofu  # Infrastructure only
-ansible-playbook -i inventory site.yml --tags k3s           # Just K3s
-ansible-playbook -i inventory site.yml --tags storage       # Just storage
-ansible-playbook -i inventory site.yml --tags metallb       # Just load balancer
-
-# Just applications (requires infrastructure)
-cd terraform/
-tofu init
-tofu apply
-```
 
 ### Management Commands
 ```bash
@@ -159,3 +140,4 @@ The repository includes a modern web-based configuration system located in `web-
 6. **Building**: Run `npm run build` in frontend directory for production builds
 
 The system supports both web-based configuration and direct deployment modes. All deployments are idempotent - multiple runs are safe and will only make necessary changes.
+
