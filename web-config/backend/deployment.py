@@ -203,6 +203,9 @@ class DeploymentManager:
 
         # Change to ansible directory
         original_cwd = os.getcwd()
+        await self._add_log(deployment_id, f"Original CWD: {' '.join(original_cwd)}")
+        await self._add_log(deployment_id, f"Ansible dir:  {' '.join(self.ansible_dir)}")
+
         os.chdir(self.ansible_dir)
 
         try:
@@ -212,7 +215,6 @@ class DeploymentManager:
                 "-i", "inventory/hosts.yml",
                 "stage2-deploy.yml"
             ]
-
             await self._add_log(deployment_id, f"Running: {' '.join(cmd)}")
             await self._add_log(deployment_id, f"Working directory: {self.ansible_dir}")
             result = await self._run_command(cmd, deployment_id, stream_logs=True)
