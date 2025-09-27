@@ -1,4 +1,3 @@
----
 # Helm and Longhorn storage setup
 - name: Check if Helm is installed
   command: helm version --short
@@ -22,6 +21,14 @@
     path: /tmp/get_helm.sh
     state: absent
 
+- name: Check if Longhorn is already installed
+  shell: helm list -n longhorn-system -o json | jq -r '.[].name' | grep -q '^longhorn$'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: longhorn_check
+  failed_when: false
+  changed_when: false
+
 - name: Add Longhorn Helm repository
   shell: helm repo add longhorn https://charts.longhorn.io
   environment:
@@ -29,19 +36,13 @@
   register: helm_repo_add
   failed_when: false
   changed_when: "'already exists' not in helm_repo_add.stderr"
+  when: longhorn_check.rc != 0
 
 - name: Update Helm repositories
   shell: helm repo update
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-
-- name: Check if Longhorn is already installed
-  shell: helm list -n longhorn-system | grep longhorn
-  environment:
-    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  register: longhorn_installed
-  failed_when: false
-  changed_when: false
+  when: longhorn_check.rc != 0
 
 - name: Install Longhorn distributed storage
   shell: |
@@ -54,7 +55,7 @@
       --wait --timeout=10m
   environment:
     KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-  when: longhorn_installed.rc != 0
+  when: longhorn_check.rc != 0
 
 - name: Wait for Longhorn to be ready
   shell: kubectl get pods -n longhorn-system -l app=longhorn-manager --no-headers | grep Running | wc -l
@@ -65,3 +66,4 @@
   retries: 30
   delay: 10
   changed_when: false
+  when: longhorn_check.rc != 0
