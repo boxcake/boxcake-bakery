@@ -117,7 +117,7 @@
         {% endif %}
 
         PORTAINER_URL="http://${PORTAINER_IP}:80"
-        ADMIN_PASSWORD="{{ deployment.admin_password | default('homelab123!') }}"
+        ADMIN_PASSWORD="{{ deployment.admin_password | default('TheHomeLab123!') }}"
 
         echo "🚀 Configuring Portainer at ${PORTAINER_URL}..."
 
