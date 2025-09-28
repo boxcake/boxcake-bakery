@@ -129,6 +129,19 @@ chown -R homelab:homelab ${INSTALL_DIR}
 chmod -R 755 ${INSTALL_DIR}
 chmod g+s ${INSTALL_DIR}
 
+# Create persistent OpenTofu state directory
+echo "📁 Creating persistent OpenTofu state directory..."
+mkdir -p /home/homelab/tfstate
+chown homelab:homelab /home/homelab/tfstate
+chmod 755 /home/homelab/tfstate
+
+# Migrate existing state file if it exists
+if [ -f "${INSTALL_DIR}/terraform/terraform.tfstate" ]; then
+    echo "📋 Migrating existing OpenTofu state file..."
+    cp "${INSTALL_DIR}/terraform/terraform.tfstate" /home/homelab/tfstate/terraform.tfstate
+    chown homelab:homelab /home/homelab/tfstate/terraform.tfstate
+fi
+
 # Add venv to PATH for this script
 export PATH="$VENV_PATH/bin:$PATH"
 

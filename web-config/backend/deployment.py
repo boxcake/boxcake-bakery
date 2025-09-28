@@ -302,6 +302,10 @@ class DeploymentManager:
         if not tofu_cmd:
             raise Exception("OpenTofu/Terraform command not found")
 
+        # Define persistent state file location
+        state_file = "/home/homelab/tfstate/terraform.tfstate"
+        await self._add_log(deployment_id, f"Using state file: {state_file}")
+
         # Change to terraform directory
         original_cwd = os.getcwd()
         os.chdir(self.terraform_dir)
@@ -313,12 +317,12 @@ class DeploymentManager:
             if result.returncode != 0:
                 raise Exception("OpenTofu init failed")
 
-            # Apply configuration
+            # Apply configuration with persistent state file
             user_tfvars = Path("user.tfvars")
             if user_tfvars.exists():
-                apply_cmd = [tofu_cmd, "apply", "-auto-approve", "-var-file=user.tfvars"]
+                apply_cmd = [tofu_cmd, "apply", "-auto-approve", f"-state={state_file}", "-var-file=user.tfvars"]
             else:
-                apply_cmd = [tofu_cmd, "apply", "-auto-approve"]
+                apply_cmd = [tofu_cmd, "apply", "-auto-approve", f"-state={state_file}"]
 
             result = await self._run_command(apply_cmd, deployment_id, stream_logs=True)
             if result.returncode != 0:

@@ -23,17 +23,17 @@ This directory contains OpenTofu/Terraform configuration for deploying Kubernete
 
 3. **Plan Deployment**:
    ```bash
-   tofu plan
+   tofu plan -state=/home/homelab/tfstate/terraform.tfstate
    ```
 
 4. **Deploy Resources**:
    ```bash
-   tofu apply
+   tofu apply -state=/home/homelab/tfstate/terraform.tfstate
    ```
 
 5. **View Outputs**:
    ```bash
-   tofu output
+   tofu output -state=/home/homelab/tfstate/terraform.tfstate
    ```
 
 ## 🧹 Cleanup
@@ -41,7 +41,7 @@ This directory contains OpenTofu/Terraform configuration for deploying Kubernete
 To remove all resources:
 
 ```bash
-tofu destroy
+tofu destroy -state=/home/homelab/tfstate/terraform.tfstate
 ```
 
 ## 📁 File Structure
@@ -74,8 +74,8 @@ Key variables to customize in `terraform.tfvars`:
 
 After deployment, access your services:
 
-- **Portainer**: Check `tofu output portainer_urls`
-- **Registry UI**: Check `tofu output registry_ui_urls`
+- **Portainer**: Check `tofu output -state=/home/homelab/tfstate/terraform.tfstate portainer_urls`
+- **Registry UI**: Check `tofu output -state=/home/homelab/tfstate/terraform.tfstate registry_ui_urls`
 
 ## 🔐 Security Notes
 
@@ -94,14 +94,14 @@ OpenTofu maintains state in `terraform.tfstate`. This file:
 
 **Resource won't delete?**
 ```bash
-tofu state list
-tofu state rm <resource_name>  # Remove from state only
+tofu state list -state=/home/homelab/tfstate/terraform.tfstate
+tofu state rm -state=/home/homelab/tfstate/terraform.tfstate <resource_name>  # Remove from state only
 kubectl delete <resource>      # Delete from cluster
 ```
 
 **State issues?**
 ```bash
-tofu refresh  # Sync state with cluster
+tofu refresh -state=/home/homelab/tfstate/terraform.tfstate  # Sync state with cluster
 ```
 
 **Check deployment status:**

@@ -64,8 +64,8 @@ kubectl get svc -o json | jq '.items[] | select(.metadata.annotations."kubelish/
 ```bash
 # OpenTofu state management
 cd terraform/
-tofu state list
-tofu refresh
+tofu state list -state=/home/homelab/tfstate/terraform.tfstate
+tofu refresh -state=/home/homelab/tfstate/terraform.tfstate
 
 # Service debugging
 kubectl describe pod <pod-name>
@@ -88,6 +88,11 @@ annotations:
 - Longhorn provides distributed storage across cluster nodes
 - All applications use PersistentVolumes with `storage_class_name = "longhorn"`
 - Master node deployment ensures registry runs on control plane
+
+### State Management
+- OpenTofu/Terraform state is persisted in `/home/homelab/tfstate/terraform.tfstate`
+- State file persists across repository updates and system reboots
+- All OpenTofu commands automatically use the persistent state file location
 
 ### Load Balancer Integration
 - MetalLB provides LoadBalancer services with configurable IP pools
