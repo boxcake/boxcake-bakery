@@ -64,8 +64,8 @@ kubectl get svc -o json | jq '.items[] | select(.metadata.annotations."kubelish/
 ```bash
 # OpenTofu state management
 cd terraform/
-tofu state list -state=/home/homelab/tfstate/terraform.tfstate
-tofu refresh -state=/home/homelab/tfstate/terraform.tfstate
+tofu state list
+tofu refresh
 
 # Service debugging
 kubectl describe pod <pod-name>
@@ -90,9 +90,10 @@ annotations:
 - Master node deployment ensures registry runs on control plane
 
 ### State Management
-- OpenTofu/Terraform state is persisted in `/home/homelab/tfstate/terraform.tfstate`
+- OpenTofu/Terraform uses local backend configuration in `terraform/backend.tf`
+- State file is persisted in `/home/homelab/tfstate/terraform.tfstate`
 - State file persists across repository updates and system reboots
-- All OpenTofu commands automatically use the persistent state file location
+- All OpenTofu commands automatically use the configured backend location
 
 ### Load Balancer Integration
 - MetalLB provides LoadBalancer services with configurable IP pools
@@ -145,4 +146,4 @@ The repository includes a modern web-based configuration system located in `web-
 6. **Building**: Run `npm run build` in frontend directory for production builds
 
 The system supports both web-based configuration and direct deployment modes. All deployments are idempotent - multiple runs are safe and will only make necessary changes.
-
+- During development you can not test code locally. All code will be deployed to a remote computer and tested there. Please provide comands to test specific functionality on the remote computer.

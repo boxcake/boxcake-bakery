@@ -140,6 +140,7 @@ if [ -f "${INSTALL_DIR}/terraform/terraform.tfstate" ]; then
     echo "📋 Migrating existing OpenTofu state file..."
     cp "${INSTALL_DIR}/terraform/terraform.tfstate" /home/homelab/tfstate/terraform.tfstate
     chown homelab:homelab /home/homelab/tfstate/terraform.tfstate
+    echo "   State file migrated to persistent location"
 fi
 
 # Add venv to PATH for this script

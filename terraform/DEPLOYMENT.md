@@ -18,7 +18,7 @@ ansible-playbook -i inventory site.yml
 cd terraform/
 # Deploy container registry, portainer, etc.
 terraform init
-terraform apply -state=/home/homelab/tfstate/terraform.tfstate
+terraform apply
 ```
 
 ### 3. Optional: Configure Portainer via Ansible
